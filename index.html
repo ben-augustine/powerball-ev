@@ -1,20 +1,93 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Powerball Expected Value Calculator</title>
+  <title>Powerball EV (Cash Value)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Powerball Expected Value Calculator</h1>
+  <header>
+    <h1>Powerball Expected Value Calculator</h1>
+    <p class="sub">
+      Estimates EV per $2 ticket (cash value) under stated assumptions.
+    </p>
+  </header>
 
-  <p>
-    This site estimates the expected value (EV) of a Powerball ticket
-    under clearly stated assumptions.
-  </p>
+  <main>
+    <section class="card">
+      <h2>Inputs</h2>
 
-  <p><em>Calculator coming very soon.</em></p>
+      <div class="grid">
+        <label>
+          Cash value jackpot (USD)
+          <input id="cashValue" type="number" inputmode="numeric" placeholder="e.g. 900000000" />
+        </label>
+
+        <label>
+          Jackpot annuity (USD) <span class="muted">(optional)</span>
+          <input id="annuity" type="number" inputmode="numeric" placeholder="e.g. 1300000000" />
+        </label>
+
+        <label>
+          Ticket price (USD)
+          <input id="ticketPrice" type="number" inputmode="decimal" value="2" />
+        </label>
+
+        <label>
+          Jackpot share of ticket revenue (0–1)
+          <input id="jackpotShare" type="number" inputmode="decimal" value="0.70" step="0.01" min="0" max="1" />
+        </label>
+
+        <label>
+          Federal tax rate (0–1)
+          <input id="fedTax" type="number" inputmode="decimal" value="0.37" step="0.01" min="0" max="1" />
+        </label>
+
+        <label>
+          State tax rate (0–1)
+          <input id="stateTax" type="number" inputmode="decimal" value="0.00" step="0.01" min="0" max="1" />
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="calcBtn">Calculate EV</button>
+        <span class="muted">No auto data yet — manual inputs for now.</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Results</h2>
+
+      <div class="results">
+        <div>
+          <div class="label">EV per ticket</div>
+          <div id="evOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">EV minus ticket price</div>
+          <div id="edgeOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Notes</div>
+          <div id="notesOut" class="small">Enter inputs and click Calculate.</div>
+        </div>
+      </div>
+
+      <details class="assumptions">
+        <summary>Assumptions (click)</summary>
+        <ul>
+          <li>Uses cash value jackpot as the jackpot pool.</li>
+          <li>Jackpot split modeling and lower-tier prize EV will be added next.</li>
+          <li>Tax rates are simplified inputs (estimates).</li>
+        </ul>
+      </details>
+    </section>
+  </main>
+
+  <footer class="muted">
+    This is a math tool, not gambling advice.
+  </footer>
 
   <script src="script.js"></script>
 </body>
