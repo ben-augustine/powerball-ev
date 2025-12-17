@@ -1,7 +1,89 @@
+:root {
+  --max: 840px;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  max-width: 720px;
+  max-width: var(--max);
   margin: 2rem auto;
   padding: 0 1rem;
   line-height: 1.5;
+}
+
+header h1 {
+  margin: 0 0 0.25rem 0;
+}
+
+.sub { margin: 0 0 1.5rem 0; }
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.results {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.label { font-size: 0.9rem; opacity: 0.75; }
+.value { font-size: 1.4rem; font-weight: 700; }
+.small { font-size: 0.95rem; }
+
+.muted { opacity: 0.7; }
+
+.assumptions { margin-top: 1rem; }
+
+footer {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .results {
+    grid-template-columns: 1fr 1fr;
+  }
+  .results > div:last-child {
+    grid-column: 1 / -1;
+  }
 }
