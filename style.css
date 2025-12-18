@@ -78,6 +78,18 @@ input[type="number"] {
   -moz-appearance: textfield; /* Firefox */
 }
 
+select {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #0c0f14;
+  color: var(--text);
+}
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 
 .row {
   display: flex;
