@@ -45,9 +45,16 @@
         </label>
 
         <label>
-          State tax rate (0–1)
-          <input id="stateTax" type="number" inputmode="decimal" value="0.00" step="0.01" min="0" max="1" />
+          State
+          <select id="stateSelect"></select>
         </label>
+
+        <label>
+          State tax rate (auto)
+          <input id="stateTax" type="number" inputmode="decimal" value="0.00" step="0.0001" min="0" max="1" readonly />
+        </label>
+
+
       </div>
 
       <div class="row">
