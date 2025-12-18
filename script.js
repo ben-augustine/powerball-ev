@@ -37,6 +37,47 @@ function initStateDropdown() {
   const sel = document.getElementById("stateSelect");
   const stateTaxInput = document.getElementById("stateTax");
 
+  // Manual option first
+  sel.innerHTML = "";
+  const manualOpt = document.createElement("option");
+  manualOpt.value = "";
+  manualOpt.textContent = "Manual (enter rate)";
+  sel.appendChild(manualOpt);
+
+  // Build state options
+  const codes = Object.keys(STATE_NAMES);
+  codes.sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
+
+  for (const code of codes) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${STATE_NAMES[code]} (${code})`;
+    sel.appendChild(opt);
+  }
+
+  // Default: manual
+  sel.value = "";
+  stateTaxInput.readOnly = false;
+
+  function apply() {
+    const code = sel.value;
+
+    if (!code) {
+      // Manual mode
+      stateTaxInput.readOnly = false;
+      return;
+    }
+
+    // State-selected mode
+    const rate = STATE_TAX_TOP_2025[code] ?? 0;
+    stateTaxInput.value = rate.toFixed(4);
+    stateTaxInput.readOnly = true;
+  }
+
+  sel.addEventListener("change", apply);
+}
+
+
   // Build options
   const codes = Object.keys(STATE_NAMES);
   codes.sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
