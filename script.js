@@ -80,6 +80,14 @@ function initStateDropdown() {
     stateTaxInput.value = rate.toFixed(4);
     stateTaxInput.readOnly = true;
   });
+  // If user clicks or edits the tax box, switch to Manual
+stateTaxInput.addEventListener("focus", () => {
+  if (sel.value !== "") {
+    sel.value = "";
+    stateTaxInput.readOnly = false;
+  }
+});
+
 }
 
 initStateDropdown();
