@@ -3,6 +3,68 @@ const WHITE_TOTAL = 69;
 const WHITE_PICK = 5;
 const PB_TOTAL = 26;
 
+// Top marginal personal income tax rates (2025). Source may include local proxy.
+// Values are decimals (e.g., 4.95% => 0.0495).
+const STATE_TAX_TOP_2025 = {
+  AL: 0.0415, AK: 0.0000, AZ: 0.0250, AR: 0.0390, CA: 0.1440,
+  CO: 0.0440, CT: 0.0699, DE: 0.0785, FL: 0.0000, GA: 0.0539,
+  HI: 0.1100, ID: 0.0570, IL: 0.0495, IN: 0.0502, IA: 0.0380,
+  KS: 0.0558, KY: 0.0620, LA: 0.0300, ME: 0.0715, MD: 0.0895,
+  MA: 0.0900, MI: 0.0665, MN: 0.0985, MS: 0.0440, MO: 0.0570,
+  MT: 0.0590, NE: 0.0520, NV: 0.0000, NH: 0.0000, NJ: 0.1175,
+  NM: 0.0590, NY: 0.1478, NC: 0.0425, ND: 0.0250, OH: 0.0600,
+  OK: 0.0475, OR: 0.1469, PA: 0.0686, RI: 0.0599, SC: 0.0620,
+  SD: 0.0000, TN: 0.0000, TX: 0.0000, UT: 0.0455, VT: 0.0875,
+  VA: 0.0575, WA: 0.0000, WV: 0.0482, WI: 0.0765, WY: 0.0000,
+  DC: 0.1075
+};
+
+const STATE_NAMES = {
+  AL:"Alabama", AK:"Alaska", AZ:"Arizona", AR:"Arkansas", CA:"California",
+  CO:"Colorado", CT:"Connecticut", DE:"Delaware", FL:"Florida", GA:"Georgia",
+  HI:"Hawaii", ID:"Idaho", IL:"Illinois", IN:"Indiana", IA:"Iowa",
+  KS:"Kansas", KY:"Kentucky", LA:"Louisiana", ME:"Maine", MD:"Maryland",
+  MA:"Massachusetts", MI:"Michigan", MN:"Minnesota", MS:"Mississippi", MO:"Missouri",
+  MT:"Montana", NE:"Nebraska", NV:"Nevada", NH:"New Hampshire", NJ:"New Jersey",
+  NM:"New Mexico", NY:"New York", NC:"North Carolina", ND:"North Dakota", OH:"Ohio",
+  OK:"Oklahoma", OR:"Oregon", PA:"Pennsylvania", RI:"Rhode Island", SC:"South Carolina",
+  SD:"South Dakota", TN:"Tennessee", TX:"Texas", UT:"Utah", VT:"Vermont",
+  VA:"Virginia", WA:"Washington", WV:"West Virginia", WI:"Wisconsin", WY:"Wyoming",
+  DC:"District of Columbia"
+};
+
+function initStateDropdown() {
+  const sel = document.getElementById("stateSelect");
+  const stateTaxInput = document.getElementById("stateTax");
+
+  // Build options
+  const codes = Object.keys(STATE_NAMES);
+  codes.sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
+
+  sel.innerHTML = "";
+  for (const code of codes) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${STATE_NAMES[code]} (${code})`;
+    sel.appendChild(opt);
+  }
+
+  // Default selection (you can change this)
+  sel.value = "IA";
+
+  function apply() {
+    const code = sel.value;
+    const rate = STATE_TAX_TOP_2025[code] ?? 0;
+    stateTaxInput.value = rate.toFixed(4);
+  }
+
+  sel.addEventListener("change", apply);
+  apply();
+}
+
+initStateDropdown();
+
+
 function money(n) {
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
