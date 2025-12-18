@@ -77,22 +77,6 @@ function initStateDropdown() {
   sel.addEventListener("change", apply);
 }
 
-
-  // Build options
-  const codes = Object.keys(STATE_NAMES);
-  codes.sort((a, b) => STATE_NAMES[a].localeCompare(STATE_NAMES[b]));
-
-  sel.innerHTML = "";
-  for (const code of codes) {
-    const opt = document.createElement("option");
-    opt.value = code;
-    opt.textContent = `${STATE_NAMES[code]} (${code})`;
-    sel.appendChild(opt);
-  }
-
-  // Default selection (you can change this)
-  sel.value = "IA";
-
   function apply() {
     const code = sel.value;
     const rate = STATE_TAX_TOP_2025[code] ?? 0;
