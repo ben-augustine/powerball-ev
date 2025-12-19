@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Powerball EV (Calculator)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Powerball Expected Value Calculator</h1>
+    <p class="sub">Full calculator (cash value) under stated assumptions.</p>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="calculator.html" aria-current="page">Calculator</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Inputs</h2>
+
+      <div class="grid">
+        <label>
+          Cash value jackpot (USD)
+          <input id="cashValue" type="number" inputmode="numeric" placeholder="e.g. 900000000" />
+        </label>
+
+        <label>
+          Previous drawing cash value (USD) <span class="muted">(optional)</span>
+          <input id="prevCashValue" type="number" inputmode="numeric" placeholder="e.g. 820000000" />
+        </label>
+
+        <label>
+          Ticket price (USD)
+          <input id="ticketPrice" type="number" inputmode="decimal" value="2" />
+        </label>
+
+        <label>
+          Jackpot share of ticket revenue (0–1)
+          <input id="jackpotShare" type="number" inputmode="decimal" value="0.70" step="0.01" min="0" max="1" />
+        </label>
+
+        <label>
+          Federal tax rate (0–1)
+          <input id="fedTax" type="number" inputmode="decimal" value="0.37" step="0.01" min="0" max="1" />
+        </label>
+
+        <label>
+          State
+          <select id="stateSelect"></select>
+        </label>
+
+        <label>
+          State tax rate (0–1)
+          <input id="stateTax" type="number" inputmode="decimal" value="0.00" step="0.0001" min="0" max="1" />
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="calcBtn">Calculate EV</button>
+        <span class="muted">Manual inputs.</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Results</h2>
+
+      <div class="results">
+        <div>
+          <div class="label">EV per ticket</div>
+          <div id="evOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">EV minus ticket price</div>
+          <div id="edgeOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Notes</div>
+          <div id="notesOut" class="small">Enter inputs and click Calculate.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="muted">
+    This is a math tool, not gambling advice.
+  </footer>
+
+  <script src="calc-core.js"></script>
+  <script src="calculator.js"></script>
+</body>
+</html>
