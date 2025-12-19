@@ -1,4 +1,12 @@
 // ==============================
+// Constants for this calculator
+// ==============================
+
+// You asked to remove these inputs, so we hardcode:
+const DEFAULT_TICKET_PRICE = 2;
+const DEFAULT_JACKPOT_SHARE = 0.70;
+
+// ==============================
 // State tax data
 // ==============================
 
@@ -56,6 +64,13 @@ function hasText(id) {
   return !!el && el.value.trim() !== "";
 }
 
+// prevCash = cash - tickets * jackpotShare * ticketPrice
+function computePrevCashFromTickets({ cashValue, ticketsSold, jackpotShare, ticketPrice }) {
+  const js = Math.max(0.01, jackpotShare);
+  const tp = Math.max(0.01, ticketPrice);
+  return cashValue - (ticketsSold * js * tp);
+}
+
 // tickets = (cash - prevCash) / jackpotShare / ticketPrice
 function computeTicketsSold({ cashValue, prevCashValue, jackpotShare, ticketPrice }) {
   const deltaCash = cashValue - prevCashValue;
@@ -63,13 +78,6 @@ function computeTicketsSold({ cashValue, prevCashValue, jackpotShare, ticketPric
   const js = Math.max(0.01, jackpotShare);
   const tp = Math.max(0.01, ticketPrice);
   return deltaCash / js / tp;
-}
-
-// prevCash = cash - tickets * jackpotShare * ticketPrice
-function computePrevCashFromTickets({ cashValue, ticketsSold, jackpotShare, ticketPrice }) {
-  const js = Math.max(0.01, jackpotShare);
-  const tp = Math.max(0.01, ticketPrice);
-  return cashValue - (ticketsSold * js * tp);
 }
 
 // ==============================
@@ -80,14 +88,6 @@ function scheduleCalc() {
   clearTimeout(calcTimer);
   calcTimer = setTimeout(runCalc, 120);
 }
-
-// Prevent infinite “input -> set value -> input” loops
-let suppressSync = false;
-
-// Track which field the user edited last
-// "tickets" means ticketsSold drives prevCashValue
-// "prevCash" means prevCashValue drives ticketsSold
-let driver = "tickets"; // default; will be overwritten on load
 
 // ==============================
 // State dropdown init
@@ -144,13 +144,12 @@ function initStateDropdown() {
 }
 
 // ==============================
-// Worker autofill (cash + prevCash + tickets)
+// Worker autofill (cash + ticketsSold)
 // ==============================
 async function autofillFromWorker() {
   const cashEl = document.getElementById("cashValue");
-  const prevEl = document.getElementById("prevCashValue");
   const ticketsEl = document.getElementById("ticketsSold");
-  if (!cashEl || !prevEl || !ticketsEl) return;
+  if (!cashEl || !ticketsEl) return;
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -160,122 +159,22 @@ async function autofillFromWorker() {
     const prevCash = j?.prev?.cashValue;
     if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
 
-    // Only fill if empty (don’t overwrite manual work)
+    // Fill cash only if empty
     if (!cashEl.value) cashEl.value = Math.round(nextCash);
-    if (!prevEl.value) prevEl.value = Math.round(prevCash);
 
-    // Compute tickets from those two, but only if tickets empty
+    // Fill ticketsSold only if empty (don’t overwrite manual)
     if (!ticketsEl.value) {
-      const ticketPrice = numFrom("ticketPrice", 2);
-      const jackpotShare = numFrom("jackpotShare", 0.70);
       const t = computeTicketsSold({
         cashValue: Number(cashEl.value),
-        prevCashValue: Number(prevEl.value),
-        jackpotShare,
-        ticketPrice
+        prevCashValue: prevCash,
+        jackpotShare: DEFAULT_JACKPOT_SHARE,
+        ticketPrice: DEFAULT_TICKET_PRICE
       });
       if (Number.isFinite(t)) ticketsEl.value = Math.round(t);
     }
-
-    // After autofill, set driver to "prevCash" (since worker gave you prevCash)
-    driver = "prevCash";
   } catch (e) {
     console.error("Worker autofill failed:", e);
   }
-}
-
-// ==============================
-// Keep the two boxes synced
-// ==============================
-function syncFromTickets() {
-  if (suppressSync) return;
-
-  const cashValue = numFrom("cashValue", NaN);
-  const ticketsSold = numFrom("ticketsSold", NaN);
-  if (!Number.isFinite(cashValue) || !Number.isFinite(ticketsSold)) return;
-
-  const ticketPrice = numFrom("ticketPrice", 2);
-  const jackpotShare = clamp01(numFrom("jackpotShare", 0.70));
-
-  const prev = computePrevCashFromTickets({
-    cashValue,
-    ticketsSold,
-    jackpotShare,
-    ticketPrice
-  });
-
-  const prevEl = document.getElementById("prevCashValue");
-  if (!prevEl || !Number.isFinite(prev)) return;
-
-  suppressSync = true;
-  prevEl.value = Math.round(prev);
-  suppressSync = false;
-}
-
-function syncFromPrevCash() {
-  if (suppressSync) return;
-
-  const cashValue = numFrom("cashValue", NaN);
-  const prevCashValue = numFrom("prevCashValue", NaN);
-  if (!Number.isFinite(cashValue) || !Number.isFinite(prevCashValue)) return;
-
-  const ticketPrice = numFrom("ticketPrice", 2);
-  const jackpotShare = clamp01(numFrom("jackpotShare", 0.70));
-
-  const t = computeTicketsSold({
-    cashValue,
-    prevCashValue,
-    jackpotShare,
-    ticketPrice
-  });
-
-  const ticketsEl = document.getElementById("ticketsSold");
-  if (!ticketsEl || !Number.isFinite(t)) return;
-
-  suppressSync = true;
-  ticketsEl.value = Math.round(t);
-  suppressSync = false;
-}
-
-function initMutualSyncBehavior() {
-  const ticketsEl = document.getElementById("ticketsSold");
-  const prevEl = document.getElementById("prevCashValue");
-  const cashEl = document.getElementById("cashValue");
-  const tpEl = document.getElementById("ticketPrice");
-  const jsEl = document.getElementById("jackpotShare");
-
-  if (!ticketsEl || !prevEl) return;
-
-  // User edits tickets => tickets drives prevCash
-  ticketsEl.addEventListener("input", () => {
-    if (suppressSync) return;
-    driver = "tickets";
-    syncFromTickets();
-    scheduleCalc();
-  });
-
-  // User edits prevCash => prevCash drives tickets
-  prevEl.addEventListener("input", () => {
-    if (suppressSync) return;
-    driver = "prevCash";
-    syncFromPrevCash();
-    scheduleCalc();
-  });
-
-  // If cash / ticket price / jackpot share changes, recompute dependent field
-  [cashEl, tpEl, jsEl].forEach((el) => {
-    if (!el) return;
-    el.addEventListener("input", () => {
-      if (driver === "tickets") syncFromTickets();
-      else syncFromPrevCash();
-      scheduleCalc();
-    });
-    el.addEventListener("change", () => {
-      if (driver === "tickets") syncFromTickets();
-      else syncFromPrevCash();
-      scheduleCalc();
-    });
-  });
 }
 
 // ==============================
@@ -288,10 +187,8 @@ function runCalc() {
   if (!evOut || !edgeOut || !notesOut) return;
 
   const cashValue = numFrom("cashValue", NaN);
-  const prevCashValue = numFrom("prevCashValue", NaN);
+  const ticketsSold = numFrom("ticketsSold", NaN);
 
-  const ticketPrice = numFrom("ticketPrice", 2);
-  const jackpotShare = clamp01(numFrom("jackpotShare", 0.70));
   const fedTax = clamp01(numFrom("fedTax", 0.37));
   const stateTax = clamp01(numFrom("stateTax", 0.00));
 
@@ -302,11 +199,23 @@ function runCalc() {
     return;
   }
 
+  // If ticketsSold exists, derive prevCashValue for the EV engine.
+  // If not, we'll fall back to calc-core's fallback sales estimate.
+  let prevCashValue = NaN;
+  if (hasText("ticketsSold") && Number.isFinite(ticketsSold) && ticketsSold > 0) {
+    prevCashValue = computePrevCashFromTickets({
+      cashValue,
+      ticketsSold,
+      jackpotShare: DEFAULT_JACKPOT_SHARE,
+      ticketPrice: DEFAULT_TICKET_PRICE
+    });
+  }
+
   const res = window.PowerballEV.computeEV({
     cashValue,
     prevCashValue,
-    ticketPrice,
-    jackpotShare,
+    ticketPrice: DEFAULT_TICKET_PRICE,
+    jackpotShare: DEFAULT_JACKPOT_SHARE,
     fedTax,
     stateTax
   });
@@ -320,22 +229,24 @@ function runCalc() {
 
   const m = res.formats.money;
   evOut.textContent = m(res.totalEV);
-  edgeOut.textContent = m(res.totalEV - ticketPrice);
+  edgeOut.textContent = m(res.totalEV - DEFAULT_TICKET_PRICE);
 
   notesOut.textContent =
     `EV includes jackpot + all lower prizes (no Power Play). ` +
-    `Sales est: ${Math.round(res.ticketsEst).toLocaleString()} ` +
-    `(method: ${res.usedDelta ? "Δcash" : "fallback"}). ` +
+    `Ticket price: $${DEFAULT_TICKET_PRICE}; Jackpot share: ${(DEFAULT_JACKPOT_SHARE * 100).toFixed(0)}%. ` +
+    `Tickets used: ${Math.round(res.ticketsEst).toLocaleString()} ` +
+    `(method: ${res.usedDelta ? "from tickets" : "fallback"}). ` +
     `λ(other winners): ${res.lambdaOthers.toFixed(3)}. ` +
-    `Tax: ${(res.totalTax * 100).toFixed(1)}%. ` +
-    `Jackpot EV: ${m(res.jackpotEVPerTicket)}; Lower-tier EV: ${m(res.lowerEVPerTicket)}.`;
+    `Tax: ${(res.totalTax * 100).toFixed(1)}%.`;
 }
 
 // ==============================
-// Generic auto-calc wiring
+// Auto-calc wiring
 // ==============================
 function attachAutoCalc() {
   [
+    "cashValue",
+    "ticketsSold",
     "fedTax",
     "stateTax",
     "stateSelect",
@@ -351,19 +262,6 @@ function attachAutoCalc() {
 // Init
 // ==============================
 initStateDropdown();
-initMutualSyncBehavior();
 attachAutoCalc();
 
-// Autofill from worker, then ensure both fields are consistent, then calc
-autofillFromWorker().then(() => {
-  // If worker filled prevCash, ensure tickets matches (unless user already typed tickets)
-  if (!hasText("ticketsSold") && hasText("prevCashValue")) {
-    syncFromPrevCash();
-    driver = "prevCash";
-  } else if (hasText("ticketsSold")) {
-    syncFromTickets();
-    driver = "tickets";
-  }
-  runCalc();
-});
-
+autofillFromWorker().then(runCalc);
