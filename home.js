@@ -1,5 +1,7 @@
 // Put your Worker endpoint here:
-const WORKER_URL = "https://YOUR-WORKER.yourdomain.workers.dev/powerball";
+const WORKER_URL =
+  "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+
 
 function readNum(id) {
   return Number(document.getElementById(id).value);
