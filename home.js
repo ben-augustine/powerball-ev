@@ -1,5 +1,5 @@
 // Worker endpoint (clean URL; hourly caching happens in the Worker)
-const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
 
 function readNum(id) {
   const el = document.getElementById(id);
