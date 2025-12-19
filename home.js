@@ -1,10 +1,10 @@
 // Put your Worker endpoint here:
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=2";
 
-
-
 function readNum(id) {
-  return Number(document.getElementById(id).value);
+  const el = document.getElementById(id);
+  if (!el) return NaN;
+  return Number(el.value);
 }
 
 async function refreshHero() {
@@ -12,6 +12,8 @@ async function refreshHero() {
   const heroTickets = document.getElementById("heroTickets");
   const heroEV = document.getElementById("heroEV");
   const heroMeta = document.getElementById("heroMeta");
+
+  if (!heroCash || !heroTickets || !heroEV || !heroMeta) return;
 
   heroMeta.textContent = "Updating…";
 
@@ -31,7 +33,6 @@ async function refreshHero() {
     const fedTax = readNum("fedTax") || 0.37;
     const stateTax = readNum("stateTax") || 0.00;
 
-    // Use your same EV engine; prevCashValue drives ticket estimation
     const res = window.PowerballEV.computeEV({
       cashValue,
       prevCashValue,
@@ -54,10 +55,8 @@ async function refreshHero() {
   }
 }
 
-document.getElementById("refreshBtn").addEventListener("click", refreshHero);
+const refreshBtn = document.getElementById("refreshBtn");
+if (refreshBtn) refreshBtn.addEventListener("click", refreshHero);
 
-refreshHero(
-  const cashValue = j?.next?.cashValue;
-  const prevCashValue = j?.prev?.cashValue;
-);
+refreshHero();
 setInterval(refreshHero, 60 * 60 * 1000);
