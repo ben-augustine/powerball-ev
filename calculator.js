@@ -1,14 +1,12 @@
 // ==============================
 // Constants for this calculator
 // ==============================
-
 const DEFAULT_TICKET_PRICE = 2;
 const DEFAULT_JACKPOT_SHARE = 0.70;
 
 // ==============================
 // State tax data
 // ==============================
-
 // Top marginal personal income tax rates (approx, 2025) as decimals
 const STATE_TAX_TOP_2025 = {
   AL:0.0415, AK:0.0000, AZ:0.0250, AR:0.0390, CA:0.1440,
@@ -41,7 +39,8 @@ const STATE_NAMES = {
 // ==============================
 // Worker endpoint
 // ==============================
-const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+// Use v=1 (you already saw /powerball sometimes returns nulls without it)
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
 
 // ==============================
 // Helpers
@@ -51,16 +50,20 @@ function clamp01(x) {
   return Math.min(1, Math.max(0, x));
 }
 
-function numFrom(id, fallback = NaN) {
-  const el = document.getElementById(id);
-  if (!el) return fallback;
-  const v = Number(el.value);
-  return Number.isFinite(v) ? v : fallback;
+// Parse numeric input safely (handles commas/spaces)
+function readNumberValue(el) {
+  if (!el) return NaN;
+  const raw = String(el.value ?? "").trim();
+  if (!raw) return NaN;
+  const cleaned = raw.replace(/,/g, "").replace(/\s+/g, "");
+  const v = Number(cleaned);
+  return Number.isFinite(v) ? v : NaN;
 }
 
-function hasText(id) {
+function numFrom(id, fallback = NaN) {
   const el = document.getElementById(id);
-  return !!el && el.value.trim() !== "";
+  const v = readNumberValue(el);
+  return Number.isFinite(v) ? v : fallback;
 }
 
 // prevCash = cash - tickets * jackpotShare * ticketPrice
@@ -113,6 +116,7 @@ function initStateDropdown() {
     sel.appendChild(opt);
   }
 
+  // default: manual
   sel.value = "";
   stateTaxInput.readOnly = false;
 
@@ -131,6 +135,7 @@ function initStateDropdown() {
 
   sel.addEventListener("change", applyFromSelect);
 
+  // Focusing the stateTax box flips back to manual
   stateTaxInput.addEventListener("focus", () => {
     if (sel.value !== "") {
       sel.value = "";
@@ -158,31 +163,42 @@ async function autofillFromWorker() {
     const prevCash = j?.prev?.cashValue;
     if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
 
-    // Fill cash only if empty
-    if (!cashEl.value) cashEl.value = Math.round(nextCash);
+    // Only fill if empty (never overwrite manual input)
+    if (!String(cashEl.value ?? "").trim()) cashEl.value = String(Math.round(nextCash));
 
-    // Fill ticketsSold only if empty (don’t overwrite manual)
-    if (!ticketsEl.value) {
+    if (!String(ticketsEl.value ?? "").trim()) {
+      const cashNow = readNumberValue(cashEl);
       const t = computeTicketsSold({
-        cashValue: Number(cashEl.value),
+        cashValue: Number.isFinite(cashNow) ? cashNow : nextCash,
         prevCashValue: prevCash,
         jackpotShare: DEFAULT_JACKPOT_SHARE,
         ticketPrice: DEFAULT_TICKET_PRICE
       });
-      if (Number.isFinite(t)) ticketsEl.value = Math.round(t);
+      if (Number.isFinite(t)) ticketsEl.value = String(Math.round(t));
     }
+
+    scheduleCalc(); // compute after autofill
   } catch (e) {
+    // No on-page notes by design; log only
     console.error("Worker autofill failed:", e);
   }
 }
 
 // ==============================
-// Main calculation
+// Main calculation (no notes UI)
 // ==============================
 function runCalc() {
   const evOut = document.getElementById("evOut");
   const edgeOut = document.getElementById("edgeOut");
-  if (!evOut || !edgeOut ||) return;
+  if (!evOut || !edgeOut) return;
+
+  // If calc-core didn't load, keep it quiet (no notes)
+  if (!window.PowerballEV || typeof window.PowerballEV.computeEV !== "function") {
+    console.error("calc-core.js not loaded: window.PowerballEV is missing");
+    evOut.textContent = "—";
+    edgeOut.textContent = "—";
+    return;
+  }
 
   const cashValue = numFrom("cashValue", NaN);
   const ticketsSold = numFrom("ticketsSold", NaN);
@@ -190,17 +206,16 @@ function runCalc() {
   const fedTax = clamp01(numFrom("fedTax", 0.37));
   const stateTax = clamp01(numFrom("stateTax", 0.00));
 
+  // If required inputs missing, show dashes (no notes)
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
     evOut.textContent = "—";
     edgeOut.textContent = "—";
-    notesOut.textContent = "Enter a valid cash value jackpot.";
     return;
   }
 
-  // If ticketsSold exists, derive prevCashValue for the EV engine.
-  // If not, we'll fall back to calc-core's fallback sales estimate.
+  // Derive prevCashValue from ticketsSold if provided
   let prevCashValue = NaN;
-  if (hasText("ticketsSold") && Number.isFinite(ticketsSold) && ticketsSold > 0) {
+  if (Number.isFinite(ticketsSold) && ticketsSold > 0) {
     prevCashValue = computePrevCashFromTickets({
       cashValue,
       ticketsSold,
@@ -218,8 +233,9 @@ function runCalc() {
     stateTax
   });
 
-  if (!res.ok) {
-    notesOut.textContent = res.error || "Calculation error.";
+  if (!res || !res.ok) {
+    // quiet fail (no notes)
+    console.error("computeEV error:", res?.error || res);
     evOut.textContent = "—";
     edgeOut.textContent = "—";
     return;
@@ -228,38 +244,31 @@ function runCalc() {
   const m = res.formats.money;
   evOut.textContent = m(res.totalEV);
   edgeOut.textContent = m(res.totalEV - DEFAULT_TICKET_PRICE);
-
-  notesOut.textContent =
-    `EV includes jackpot + all lower prizes (no Power Play). ` +
-    `Ticket price: $${DEFAULT_TICKET_PRICE}; Jackpot share: ${(DEFAULT_JACKPOT_SHARE * 100).toFixed(0)}%. ` +
-    `Tickets used: ${Math.round(res.ticketsEst).toLocaleString()} ` +
-    `(method: ${res.usedDelta ? "from tickets" : "fallback"}). ` +
-    `λ(other winners): ${res.lambdaOthers.toFixed(3)}. ` +
-    `Tax: ${(res.totalTax * 100).toFixed(1)}%.`;
 }
 
 // ==============================
 // Auto-calc wiring
 // ==============================
 function attachAutoCalc() {
-  [
-    "cashValue",
-    "ticketsSold",
-    "fedTax",
-    "stateTax",
-    "stateSelect",
-  ].forEach((id) => {
+  const ids = ["cashValue", "ticketsSold", "fedTax", "stateTax", "stateSelect"];
+  for (const id of ids) {
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) continue;
     el.addEventListener("input", scheduleCalc);
     el.addEventListener("change", scheduleCalc);
-  });
+    el.addEventListener("keyup", scheduleCalc);
+  }
+
+  // If page loads with values already present, compute once
+  scheduleCalc();
 }
 
 // ==============================
-// Init
+// Init (wait for DOM)
 // ==============================
-initStateDropdown();
-attachAutoCalc();
-
-autofillFromWorker().then(runCalc);
+window.addEventListener("DOMContentLoaded", async () => {
+  initStateDropdown();
+  attachAutoCalc();
+  await autofillFromWorker();
+  runCalc();
+});
