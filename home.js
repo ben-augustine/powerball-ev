@@ -1,4 +1,4 @@
-// Put your Worker endpoint here:
+// Worker endpoint (clean URL; hourly caching happens in the Worker)
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
 
 function readNum(id) {
@@ -28,6 +28,7 @@ async function refreshHero() {
       throw new Error("Missing cash values");
     }
 
+    // If you removed these inputs from the homepage, these will fall back to defaults.
     const ticketPrice = readNum("ticketPrice") || 2;
     const jackpotShare = readNum("jackpotShare") || 0.70;
     const fedTax = readNum("fedTax") || 0.37;
@@ -39,7 +40,7 @@ async function refreshHero() {
       ticketPrice,
       jackpotShare,
       fedTax,
-      stateTax
+      stateTax,
     });
 
     if (!res.ok) throw new Error(res.error);
@@ -48,7 +49,7 @@ async function refreshHero() {
     heroTickets.textContent = Math.round(res.ticketsEst).toLocaleString();
     heroEV.textContent = res.formats.money(res.totalEV);
 
-    // ✅ EV color logic goes HERE (after res exists)
+    // EV color (green if >= ticket price, red otherwise)
     heroEV.classList.remove("ev-positive", "ev-negative");
     if (res.totalEV >= ticketPrice) heroEV.classList.add("ev-positive");
     else heroEV.classList.add("ev-negative");
@@ -60,3 +61,10 @@ async function refreshHero() {
   }
 }
 
+// Manual refresh button (optional)
+const refreshBtn = document.getElementById("refreshBtn");
+if (refreshBtn) refreshBtn.addEventListener("click", refreshHero);
+
+// Run now + hourly
+refreshHero();
+setInterval(refreshHero, 60 * 60 * 1000);
