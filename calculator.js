@@ -27,6 +27,43 @@ const STATE_NAMES = {
   DC:"District of Columbia"
 };
 
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+async function autofillFromWorker({ runAfter = false } = {}) {
+  const autoStatus = document.getElementById("autoStatus");
+  const cashEl = document.getElementById("cashValue");
+  const prevEl = document.getElementById("prevCashValue");
+
+  if (!cashEl || !prevEl) return;
+
+  if (autoStatus) autoStatus.textContent = "Fetching…";
+
+  try {
+    const r = await fetch(WORKER_URL, { cache: "no-store" });
+    const j = await r.json();
+
+    const nextCash = j?.next?.cashValue;
+    const prevCash = j?.prev?.cashValue;
+
+    if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) {
+      throw new Error("Missing cash values");
+    }
+
+    cashEl.value = Math.round(nextCash);
+    prevEl.value = Math.round(prevCash);
+
+    if (autoStatus) {
+      const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
+      autoStatus.textContent = `Autofilled. Last fetch: ${when}`;
+    }
+
+    if (runAfter && typeof runCalc === "function") runCalc();
+  } catch (e) {
+    console.error(e);
+    if (autoStatus) autoStatus.textContent = "Autofill failed.";
+  }
+}
+
+
 function initStateDropdown() {
   const sel = document.getElementById("stateSelect");
   const stateTaxInput = document.getElementById("stateTax");
@@ -73,6 +110,13 @@ function initStateDropdown() {
       stateTaxInput.readOnly = false;
     }
   });
+
+  const autofillBtn = document.getElementById("autofillBtn");
+    if (autofillBtn) autofillBtn.addEventListener("click", () => autofillFromWorker({ runAfter: true }));
+
+    // Autofill once on load (does NOT auto-calc unless you want it to)
+    autofillFromWorker({ runAfter: false });
+
 
   applyFromSelect();
 }
