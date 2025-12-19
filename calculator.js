@@ -2,7 +2,6 @@
 // Constants for this calculator
 // ==============================
 
-// You asked to remove these inputs, so we hardcode:
 const DEFAULT_TICKET_PRICE = 2;
 const DEFAULT_JACKPOT_SHARE = 0.70;
 
