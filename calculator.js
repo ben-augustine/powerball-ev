@@ -51,10 +51,9 @@ function numFrom(id, fallback = NaN) {
   return Number.isFinite(v) ? v : fallback;
 }
 
-function isUserEntered(id) {
+function hasText(id) {
   const el = document.getElementById(id);
-  if (!el) return false;
-  return el.value.trim() !== "";
+  return !!el && el.value.trim() !== "";
 }
 
 // tickets = Δcash / jackpotShare / ticketPrice
@@ -73,6 +72,19 @@ function computePrevCashFromTickets({ cashValue, ticketsSold, jackpotShare, tick
   const tp = Math.max(0.01, ticketPrice);
   return cashValue - (ticketsSold * js * tp);
 }
+
+// ==============================
+// Auto-recalc (debounced)
+// ==============================
+let calcTimer = null;
+function scheduleCalc() {
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(runCalc, 150);
+}
+
+// Track which field the user is “driving”
+let userDrivenMode = "auto"; // "auto" | "tickets" | "prevCash"
+let suppressMutualClear = false;
 
 // ==============================
 // State dropdown init
@@ -99,7 +111,6 @@ function initStateDropdown() {
     sel.appendChild(opt);
   }
 
-  // default: manual
   sel.value = "";
   stateTaxInput.readOnly = false;
 
@@ -107,18 +118,17 @@ function initStateDropdown() {
     const code = sel.value;
     if (!code) {
       stateTaxInput.readOnly = false;
+      scheduleCalc();
       return;
     }
     const rate = STATE_TAX_TOP_2025[code] ?? 0;
     stateTaxInput.value = rate.toFixed(4);
     stateTaxInput.readOnly = true;
-
     scheduleCalc();
   }
 
   sel.addEventListener("change", applyFromSelect);
 
-  // Clicking into tax box flips back to manual
   stateTaxInput.addEventListener("focus", () => {
     if (sel.value !== "") {
       sel.value = "";
@@ -131,13 +141,13 @@ function initStateDropdown() {
 }
 
 // ==============================
-// Worker autofill (cash + prevCash internal + auto ticketsSold)
+// Worker autofill (fills BOTH boxes initially)
 // ==============================
 async function autofillFromWorker() {
   const cashEl = document.getElementById("cashValue");
-  const prevHidden = document.getElementById("prevCashValue"); // hidden
-  const ticketsEl = document.getElementById("ticketsSold");    // visible
-  if (!cashEl || !prevHidden || !ticketsEl) return;
+  const prevCashEl = document.getElementById("prevCashValue");
+  const ticketsEl = document.getElementById("ticketsSold");
+  if (!cashEl || !prevCashEl || !ticketsEl) return;
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -147,19 +157,17 @@ async function autofillFromWorker() {
     const prevCash = j?.prev?.cashValue;
     if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
 
-    // Fill cash only if empty
+    // Only set if empty (don’t overwrite manual edits on refresh)
     if (!cashEl.value) cashEl.value = Math.round(nextCash);
+    if (!prevCashEl.value) prevCashEl.value = Math.round(prevCash);
 
-    // Always set internal prev cash from worker (baseline)
-    prevHidden.value = Math.round(prevCash);
-
-    // If user hasn't typed tickets, compute and fill tickets
-    if (!isUserEntered("ticketsSold")) {
+    // If tickets is empty, compute and set it
+    if (!ticketsEl.value) {
       const ticketPrice = numFrom("ticketPrice", 2);
       const jackpotShare = numFrom("jackpotShare", 0.70);
       const t = computeTicketsSold({
         cashValue: Number(cashEl.value),
-        prevCashValue: Number(prevHidden.value),
+        prevCashValue: Number(prevCashEl.value),
         jackpotShare,
         ticketPrice
       });
@@ -168,6 +176,39 @@ async function autofillFromWorker() {
   } catch (e) {
     console.error("Worker autofill failed:", e);
   }
+}
+
+// ==============================
+// Mutual-clear behavior you asked for
+// ==============================
+function initMutualClearBehavior() {
+  const ticketsEl = document.getElementById("ticketsSold");
+  const prevCashEl = document.getElementById("prevCashValue");
+  if (!ticketsEl || !prevCashEl) return;
+
+  ticketsEl.addEventListener("input", () => {
+    if (suppressMutualClear) return;
+
+    // User is driving via tickets => clear previous cash display
+    userDrivenMode = "tickets";
+    suppressMutualClear = true;
+    prevCashEl.value = "";
+    suppressMutualClear = false;
+
+    scheduleCalc();
+  });
+
+  prevCashEl.addEventListener("input", () => {
+    if (suppressMutualClear) return;
+
+    // User is driving via prev cash => clear tickets display
+    userDrivenMode = "prevCash";
+    suppressMutualClear = true;
+    ticketsEl.value = "";
+    suppressMutualClear = false;
+
+    scheduleCalc();
+  });
 }
 
 // ==============================
@@ -185,8 +226,8 @@ function runCalc() {
   const fedTax = clamp01(numFrom("fedTax", 0.37));
   const stateTax = clamp01(numFrom("stateTax", 0.00));
 
-  const prevHidden = document.getElementById("prevCashValue"); // hidden
-  const ticketsEl = document.getElementById("ticketsSold");    // visible
+  const ticketsSold = numFrom("ticketsSold", NaN);
+  const prevCashValueUI = numFrom("prevCashValue", NaN);
 
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
     evOut.textContent = "—";
@@ -195,34 +236,39 @@ function runCalc() {
     return;
   }
 
-  // Decide whether tickets are manual or auto
-  const ticketsManual = isUserEntered("ticketsSold");
-  const ticketsSold = ticketsManual ? numFrom("ticketsSold", NaN) : NaN;
+  // Determine prevCashValue used for EV engine
+  let prevCashValueForCalc = prevCashValueUI;
 
-  let prevCashValue = Number(prevHidden?.value);
-
-  if (ticketsManual && Number.isFinite(ticketsSold) && ticketsSold > 0) {
-    // Manual tickets => back-calc prev cash and store it
-    prevCashValue = computePrevCashFromTickets({
+  if (userDrivenMode === "tickets" && hasText("ticketsSold") && Number.isFinite(ticketsSold) && ticketsSold > 0) {
+    // tickets drives => derive prev cash internally, but keep UI cleared (as you requested)
+    prevCashValueForCalc = computePrevCashFromTickets({
       cashValue,
       ticketsSold,
       jackpotShare,
       ticketPrice
     });
-    if (prevHidden) prevHidden.value = Math.round(prevCashValue);
+  } else if (userDrivenMode === "prevCash" && hasText("prevCashValue") && Number.isFinite(prevCashValueUI) && prevCashValueUI > 0) {
+    // prev cash drives => use it directly
+    prevCashValueForCalc = prevCashValueUI;
   } else {
-    // Auto tickets (from prev cash). If we have a usable prev cash, keep tickets box synced.
-    if (Number.isFinite(prevCashValue)) {
-      const t = computeTicketsSold({ cashValue, prevCashValue, jackpotShare, ticketPrice });
-      if (Number.isFinite(t) && ticketsEl && !ticketsManual) {
-        ticketsEl.value = Math.round(t);
+    // auto mode => if we have both numbers, keep tickets synced (without flipping modes)
+    if (Number.isFinite(prevCashValueUI) && prevCashValueUI > 0) {
+      const t = computeTicketsSold({ cashValue, prevCashValue: prevCashValueUI, jackpotShare, ticketPrice });
+      if (Number.isFinite(t)) {
+        const ticketsEl = document.getElementById("ticketsSold");
+        if (ticketsEl && !hasText("ticketsSold")) {
+          suppressMutualClear = true;
+          ticketsEl.value = Math.round(t);
+          suppressMutualClear = false;
+        }
       }
+      prevCashValueForCalc = prevCashValueUI;
     }
   }
 
   const res = window.PowerballEV.computeEV({
     cashValue,
-    prevCashValue,
+    prevCashValue: prevCashValueForCalc,
     ticketPrice,
     jackpotShare,
     fedTax,
@@ -250,18 +296,13 @@ function runCalc() {
 }
 
 // ==============================
-// Auto-recalculate on change (debounced)
+// Auto-calc wiring
 // ==============================
-let calcTimer = null;
-function scheduleCalc() {
-  clearTimeout(calcTimer);
-  calcTimer = setTimeout(runCalc, 150);
-}
-
 function attachAutoCalc() {
   [
     "cashValue",
     "ticketsSold",
+    "prevCashValue",
     "ticketPrice",
     "jackpotShare",
     "fedTax",
@@ -279,7 +320,12 @@ function attachAutoCalc() {
 // Init
 // ==============================
 initStateDropdown();
+initMutualClearBehavior();
 attachAutoCalc();
 
-// Autofill cash/prevCash + auto tickets, then calculate once
-autofillFromWorker().then(runCalc);
+// Fill both boxes initially from Worker, then calculate once
+autofillFromWorker().then(() => {
+  // Start in auto mode (so both boxes stay filled until user edits one)
+  userDrivenMode = "auto";
+  runCalc();
+});
