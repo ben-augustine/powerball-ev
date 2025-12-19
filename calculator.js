@@ -1,12 +1,24 @@
 // ==============================
-// Constants for this calculator
+// Calculator behavior constants
 // ==============================
-const DEFAULT_TICKET_PRICE = 2;
-const DEFAULT_JACKPOT_SHARE = 0.70;
+
+// What you want to display/compare against:
+const DISPLAY_TICKET_PRICE = 2;
+
+// Your model assumption: each ticket adds $0.70 to *cash value*:
+const CONTRIBUTION_PER_TICKET = 0.70;
+
+// IMPORTANT: These are only for the EV engine's internal ticket-estimation formula.
+// computeEV() uses: tickets = Δcash / (jackpotShare * ticketPrice)
+// We want: tickets = Δcash / 0.70
+// So we set: ticketPrice=1 and jackpotShare=0.70  => 0.70 * 1 = 0.70
+const EV_ENGINE_TICKET_PRICE = 1;
+const EV_ENGINE_JACKPOT_SHARE = 0.70;
 
 // ==============================
 // State tax data
 // ==============================
+
 // Top marginal personal income tax rates (approx, 2025) as decimals
 const STATE_TAX_TOP_2025 = {
   AL:0.0415, AK:0.0000, AZ:0.0250, AR:0.0390, CA:0.1440,
@@ -66,20 +78,17 @@ function numFrom(id, fallback = NaN) {
   return Number.isFinite(v) ? v : fallback;
 }
 
-// prevCash = cash - tickets * jackpotShare * ticketPrice
-function computePrevCashFromTickets({ cashValue, ticketsSold, jackpotShare, ticketPrice }) {
-  const js = Math.max(0.01, jackpotShare);
-  const tp = Math.max(0.01, ticketPrice);
-  return cashValue - (ticketsSold * js * tp);
-}
-
-// tickets = (cash - prevCash) / jackpotShare / ticketPrice
-function computeTicketsSold({ cashValue, prevCashValue, jackpotShare, ticketPrice }) {
+// tickets = (cash - prevCash) / 0.70
+function computeTicketsSoldFromDeltaCash(cashValue, prevCashValue) {
   const deltaCash = cashValue - prevCashValue;
   if (!Number.isFinite(deltaCash) || deltaCash <= 0) return NaN;
-  const js = Math.max(0.01, jackpotShare);
-  const tp = Math.max(0.01, ticketPrice);
-  return deltaCash / js / tp;
+  return deltaCash / CONTRIBUTION_PER_TICKET;
+}
+
+// prevCash = cash - tickets * 0.70
+function computePrevCashFromTickets(cashValue, ticketsSold) {
+  if (!Number.isFinite(ticketsSold) || ticketsSold <= 0) return NaN;
+  return cashValue - (ticketsSold * CONTRIBUTION_PER_TICKET);
 }
 
 // ==============================
@@ -168,18 +177,13 @@ async function autofillFromWorker() {
 
     if (!String(ticketsEl.value ?? "").trim()) {
       const cashNow = readNumberValue(cashEl);
-      const t = computeTicketsSold({
-        cashValue: Number.isFinite(cashNow) ? cashNow : nextCash,
-        prevCashValue: prevCash,
-        jackpotShare: DEFAULT_JACKPOT_SHARE,
-        ticketPrice: DEFAULT_TICKET_PRICE
-      });
+      const cashUse = Number.isFinite(cashNow) ? cashNow : nextCash;
+      const t = computeTicketsSoldFromDeltaCash(cashUse, prevCash);
       if (Number.isFinite(t)) ticketsEl.value = String(Math.round(t));
     }
 
-    scheduleCalc(); // compute after autofill
+    scheduleCalc();
   } catch (e) {
-    // No on-page notes by design; log only
     console.error("Worker autofill failed:", e);
   }
 }
@@ -189,12 +193,13 @@ async function autofillFromWorker() {
 // ==============================
 function runCalc() {
   const evOut = document.getElementById("evOut");
-  if (!evOut) return;
+  const edgeOut = document.getElementById("edgeOut");
+  if (!evOut || !edgeOut) return;
 
-  // If calc-core didn't load, keep it quiet (no notes)
   if (!window.PowerballEV || typeof window.PowerballEV.computeEV !== "function") {
     console.error("calc-core.js not loaded: window.PowerballEV is missing");
     evOut.textContent = "—";
+    edgeOut.textContent = "—";
     return;
   }
 
@@ -204,41 +209,38 @@ function runCalc() {
   const fedTax = clamp01(numFrom("fedTax", 0.37));
   const stateTax = clamp01(numFrom("stateTax", 0.00));
 
-  // If required inputs missing, show dashes (no notes)
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
     evOut.textContent = "—";
+    edgeOut.textContent = "—";
     return;
   }
 
-  // Derive prevCashValue from ticketsSold if provided
+  // If ticketsSold is provided, derive prevCashValue using $0.70 per ticket
   let prevCashValue = NaN;
   if (Number.isFinite(ticketsSold) && ticketsSold > 0) {
-    prevCashValue = computePrevCashFromTickets({
-      cashValue,
-      ticketsSold,
-      jackpotShare: DEFAULT_JACKPOT_SHARE,
-      ticketPrice: DEFAULT_TICKET_PRICE
-    });
+    prevCashValue = computePrevCashFromTickets(cashValue, ticketsSold);
   }
 
+  // computeEV ticket-estimation hack so Δcash maps to tickets via ÷0.70
   const res = window.PowerballEV.computeEV({
     cashValue,
     prevCashValue,
-    ticketPrice: DEFAULT_TICKET_PRICE,
-    jackpotShare: DEFAULT_JACKPOT_SHARE,
+    ticketPrice: EV_ENGINE_TICKET_PRICE,     // 1
+    jackpotShare: EV_ENGINE_JACKPOT_SHARE,   // 0.70
     fedTax,
     stateTax
   });
 
   if (!res || !res.ok) {
-    // quiet fail (no notes)
     console.error("computeEV error:", res?.error || res);
     evOut.textContent = "—";
+    edgeOut.textContent = "—";
     return;
   }
 
   const m = res.formats.money;
   evOut.textContent = m(res.totalEV);
+  edgeOut.textContent = m(res.totalEV - DISPLAY_TICKET_PRICE);
 }
 
 // ==============================
@@ -253,8 +255,6 @@ function attachAutoCalc() {
     el.addEventListener("change", scheduleCalc);
     el.addEventListener("keyup", scheduleCalc);
   }
-
-  // If page loads with values already present, compute once
   scheduleCalc();
 }
 
