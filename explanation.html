@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>How this is calculated | Powerball EV</title>
+  <title>How is the EV calculated? | Powerball EV</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9676725724307205"
+
+  <!-- AdSense (include if you want ads on this page too) -->
+  <script async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9676725724307205"
     crossorigin="anonymous"></script>
 </head>
 <body>
@@ -20,112 +23,165 @@
 
   <main>
     <section class="card">
-      <h2>What this site is doing</h2>
+      <h2>How is this expected value calculated?</h2>
+
       <p class="small">
-        This site estimates the <strong>expected value (EV)</strong> of one Powerball ticket using the
-        cash value jackpot and a model for how often the jackpot is split between multiple winners.
-        It also includes the fixed lower-tier prizes (no Power Play).
+        Expected value (EV) is the sum of the probabilities of outcomes occurring,
+        multiplied by the results of those outcomes.
       </p>
+    </section>
+
+    <section class="card">
+      <h2>A simple example</h2>
+
+      <p class="small">
+        Suppose you roll a four-sided die:
+      </p>
+
+      <ul class="small">
+        <li>If it lands on <strong>1</strong>, you get <strong>$1</strong></li>
+        <li>If it lands on <strong>2 or 3</strong>, you get <strong>$2</strong></li>
+        <li>If it lands on <strong>4</strong>, you get <strong>$0</strong></li>
+      </ul>
+
+      <p class="small">
+        Each face has a probability of <strong>0.25</strong>.
+      </p>
+
+      <p class="small">
+        The expected value of one roll is:
+      </p>
+
+      <p class="small" style="margin-left: 1rem;">
+        <strong>0.25(1) + 0.50(2) + 0.25(0) = 1.25</strong>
+      </p>
+
+      <p class="small">
+        So the EV of this game is <strong>$1.25</strong>.
+      </p>
+
+      <p class="small">
+        Playing this game for <strong>$1</strong> would be mathematically worth it,
+        while playing it for <strong>$2</strong> would be mathematically not worth it.
+      </p>
+
       <p class="small muted">
-        This is a math tool, not gambling advice.
+        EV does not predict what will happen on a single play — it describes the
+        long-run average over many plays.
       </p>
     </section>
 
     <section class="card">
-      <h2>Inputs</h2>
+      <h2>Applying this to Powerball</h2>
+
+      <p class="small">
+        Powerball works the same way, just with many more possible outcomes.
+      </p>
+
+      <p class="small">
+        The expected value of a Powerball ticket has two components:
+      </p>
+
       <ul class="small">
-        <li><strong>Cash value jackpot</strong>: the lump-sum value used as the jackpot pool.</li>
-        <li><strong>Tickets sold since last draw</strong>: used to estimate how many <em>other</em> jackpot winners there may be.</li>
-        <li><strong>Federal + state tax rate</strong>: applied as a single effective rate to winnings.</li>
+        <li>Lower-tier prizes</li>
+        <li>The jackpot</li>
       </ul>
-    </section>
-
-    <section class="card">
-      <h2>Core idea</h2>
-      <p class="small">
-        A ticket’s EV is:
-      </p>
-      <ul class="small">
-        <li><strong>Jackpot EV</strong> (chance you win × expected share of the jackpot after splits)</li>
-        <li><strong>+</strong> <strong>Lower-tier EV</strong> (sum of each fixed prize × its probability)</li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>Jackpot splits (why tickets sold matters)</h2>
-      <p class="small">
-        Your chance of winning the jackpot is <strong>1 / 292,201,338</strong>.
-        The reason the EV depends heavily on ticket volume is that more tickets sold means a higher
-        chance that <em>someone else</em> also hits the jackpot, which would split the prize.
-      </p>
-
-      <p class="small">
-        The model used is a standard approximation:
-        the number of <strong>other</strong> jackpot winners is treated as a
-        <strong>Poisson</strong> random variable with
-      </p>
-
-      <p class="small" style="margin-left: 1rem;">
-        <strong>λ = (tickets sold) / 292,201,338</strong>
-      </p>
-
-      <p class="small">
-        If you win and there are <em>x</em> other winners, your share is:
-      </p>
-
-      <p class="small" style="margin-left: 1rem;">
-        <strong>cash value / (1 + x)</strong>
-      </p>
-
-      <p class="small">
-        So the expected jackpot payout <em>given that you won</em> is:
-      </p>
-
-      <p class="small" style="margin-left: 1rem;">
-        <strong>E[ cash / (1 + X) ]</strong> where <strong>X ~ Poisson(λ)</strong>
-      </p>
-
-      <p class="small">
-        Then jackpot EV per ticket is:
-      </p>
-
-      <p class="small" style="margin-left: 1rem;">
-        <strong>(1 / 292,201,338) × E[ cash / (1 + X) ] × (1 − tax)</strong>
-      </p>
     </section>
 
     <section class="card">
       <h2>Lower-tier prizes</h2>
+
       <p class="small">
-        Lower-tier prizes are fixed amounts (again, no Power Play). EV is computed by:
+        If you add up the probabilities of all non-jackpot prizes and multiply each
+        by its payout, the total expected value of the lower-tier prizes is about:
       </p>
+
       <p class="small" style="margin-left: 1rem;">
-        <strong>Σ [ P(tier) × prize(tier) × (1 − tax) ]</strong>
+        <strong>$0.40 per ticket</strong>
       </p>
-      <p class="small">
-        The probabilities come from counting combinations of matched white balls and whether the Powerball matches.
-      </p>
-    </section>
 
-    <section class="card">
-      <h2>Where the “Right now” numbers come from</h2>
       <p class="small">
-        The homepage pulls the latest posted values from the official Powerball website using a Cloudflare Worker,
-        and refreshes about once an hour.
+        This value:
       </p>
-      <p class="small muted">
-        If Powerball changes page formatting, the Worker may need updates.
-      </p>
-    </section>
 
-    <section class="card">
-      <h2>Limitations</h2>
       <ul class="small">
-        <li>No Power Play.</li>
-        <li>No modeling for extra jackpot growth mechanics beyond the cash value shown on Powerball.com.</li>
-        <li>Taxes are treated as an effective rate.</li>
-        <li>Split model assumes random independent tickets (Poisson approximation).</li>
+        <li>Does not change with the number of players</li>
+        <li>Does not depend on the jackpot size</li>
+        <li>Is fixed by the game rules</li>
       </ul>
+    </section>
+
+    <section class="card">
+      <h2>The jackpot</h2>
+
+      <p class="small">
+        The jackpot is more complicated because it may be split between multiple winners.
+      </p>
+
+      <p class="small">
+        To calculate the jackpot EV, we consider:
+      </p>
+
+      <ul class="small">
+        <li>The probability that you win the jackpot</li>
+        <li>The probability that zero, one, two, or more other players also win</li>
+        <li>The share of the jackpot you receive in each case</li>
+      </ul>
+
+      <p class="small">
+        If you win:
+      </p>
+
+      <ul class="small">
+        <li>As the sole winner, you receive the full cash value</li>
+        <li>With one other winner, you receive half</li>
+        <li>With two other winners, you receive one-third</li>
+        <li>And so on</li>
+      </ul>
+
+      <p class="small">
+        The number of other jackpot winners is modeled using a standard
+        <strong>Poisson approximation</strong>, based on the number of tickets sold.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Cash value and taxes</h2>
+
+      <p class="small">
+        All jackpot calculations use the <strong>cash value</strong> only.
+        The annuity and the time value of money are not considered.
+      </p>
+
+      <p class="small">
+        Federal taxes are applied as a single effective rate.
+        State tax is not included by default, but can be adjusted in the calculator.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Final expected value</h2>
+
+      <p class="small">
+        The final EV per ticket is:
+      </p>
+
+      <p class="small" style="margin-left: 1rem;">
+        <strong>Lower-tier EV + Jackpot EV (after taxes)</strong>
+      </p>
+
+      <p class="small">
+        If this value is greater than the ticket price, the ticket has positive EV.
+        If it is lower, the ticket has negative EV.
+      </p>
+
+      <p class="small">
+        You can explore how this changes using the calculator.
+      </p>
+
+      <p class="small">
+        → <a href="calculator.html">Go to the calculator</a>
+      </p>
     </section>
   </main>
 
