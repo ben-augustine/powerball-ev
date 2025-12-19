@@ -1,11 +1,14 @@
-// Worker endpoint (clean URL; hourly caching happens in the Worker)
+// Worker endpoint (hourly caching happens in the Worker)
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
 
-function readNum(id) {
-  const el = document.getElementById(id);
-  if (!el) return NaN;
-  return Number(el.value);
-}
+// Display rules
+const DISPLAY_TICKET_PRICE = 2;
+const CONTRIBUTION_PER_TICKET = 0.70;
+
+// For computeEV ticket-estimation: tickets = Δcash / (jackpotShare * ticketPrice)
+// We want tickets = Δcash / 0.70  => use 0.70 * 1
+const EV_ENGINE_TICKET_PRICE = 1;
+const EV_ENGINE_JACKPOT_SHARE = 0.70;
 
 async function refreshHero() {
   const heroCash = document.getElementById("heroCash");
@@ -15,7 +18,7 @@ async function refreshHero() {
 
   if (!heroCash || !heroTickets || !heroEV || !heroMeta) return;
 
-  heroMeta.textContent = "Updating…";
+  heroMeta.textContent = "";
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -28,17 +31,18 @@ async function refreshHero() {
       throw new Error("Missing cash values");
     }
 
-    // If you removed these inputs from the homepage, these will fall back to defaults.
-    const ticketPrice = readNum("ticketPrice") || 2;
-    const jackpotShare = readNum("jackpotShare") || 0.70;
-    const fedTax = readNum("fedTax") || 0.37;
-    const stateTax = readNum("stateTax") || 0.00;
+    // Tickets sold since last draw based on $0.70 cash increase per ticket
+    const ticketsSold = (cashValue - prevCashValue) / CONTRIBUTION_PER_TICKET;
+
+    // Defaults for home (no inputs)
+    const fedTax = 0.37;
+    const stateTax = 0.00;
 
     const res = window.PowerballEV.computeEV({
       cashValue,
       prevCashValue,
-      ticketPrice,
-      jackpotShare,
+      ticketPrice: EV_ENGINE_TICKET_PRICE,
+      jackpotShare: EV_ENGINE_JACKPOT_SHARE,
       fedTax,
       stateTax,
     });
@@ -46,24 +50,22 @@ async function refreshHero() {
     if (!res.ok) throw new Error(res.error);
 
     heroCash.textContent = res.formats.money0(cashValue);
-    heroTickets.textContent = Math.round(res.ticketsEst).toLocaleString();
+    heroTickets.textContent = Math.round(ticketsSold).toLocaleString();
     heroEV.textContent = res.formats.money(res.totalEV);
 
-    // EV color (green if >= ticket price, red otherwise)
+    // EV color (green if >= $2, red otherwise)
     heroEV.classList.remove("ev-positive", "ev-negative");
-    if (res.totalEV >= ticketPrice) heroEV.classList.add("ev-positive");
+    if (res.totalEV >= DISPLAY_TICKET_PRICE) heroEV.classList.add("ev-positive");
     else heroEV.classList.add("ev-negative");
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
-    heroMeta.textContent = `Auto-updated hourly. Last fetch: ${when}.`;
+    // Make this more discreet: just a subtle timestamp
+    heroMeta.textContent = `Updated: ${when}`;
   } catch (e) {
-    heroMeta.textContent = "Auto-update failed. Check Worker URL / parsing.";
+    console.error(e);
+    heroMeta.textContent = "Update failed.";
   }
 }
-
-// Manual refresh button (optional)
-const refreshBtn = document.getElementById("refreshBtn");
-if (refreshBtn) refreshBtn.addEventListener("click", refreshHero);
 
 // Run now + hourly
 refreshHero();
