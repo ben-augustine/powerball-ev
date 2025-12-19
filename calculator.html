@@ -26,15 +26,12 @@
         </label>
 
         <label>
-          Previous drawing cash value (USD) <span class="muted">(optional; ignored if tickets sold is set)</span>
-          <input id="prevCashValue" type="number" inputmode="numeric" placeholder="e.g. 820000000" />
+          Tickets sold since last draw <span class="muted">(auto unless you type)</span>
+          <input id="ticketsSold" type="number" inputmode="numeric" placeholder="e.g. 120000000" />
         </label>
 
-        <label>
-        Total tickets sold <span class="muted">(manual override)</span>
-          <input id="ticketsSold" type="number" inputmode="numeric" placeholder="e.g. 80000000" />
-        </label>
-
+        <!-- internal: used for EV math / delta-cash method -->
+        <input id="prevCashValue" type="hidden" />
 
         <label>
           Ticket price (USD)
@@ -61,6 +58,10 @@
           <input id="stateTax" type="number" inputmode="decimal" value="0.00" step="0.0001" min="0" max="1" />
         </label>
       </div>
+
+      <div class="row">
+        <span class="muted">Updates automatically as you change inputs.</span>
+      </div>
     </section>
 
     <section class="card">
@@ -77,7 +78,7 @@
         </div>
         <div>
           <div class="label">Notes</div>
-          <div id="notesOut" class="small">Enter inputs and click Calculate.</div>
+          <div id="notesOut" class="small">—</div>
         </div>
       </div>
     </section>
