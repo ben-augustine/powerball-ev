@@ -111,11 +111,39 @@ function initStateDropdown() {
     }
   });
 
-  const autofillBtn = document.getElementById("autofillBtn");
-    if (autofillBtn) autofillBtn.addEventListener("click", () => autofillFromWorker({ runAfter: true }));
+// ==============================
+// Auto-recalculate on change
+// ==============================
 
-    // Autofill once on load (does NOT auto-calc unless you want it to)
-    autofillFromWorker({ runAfter: false });
+let calcTimer = null;
+function scheduleCalc() {
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(runCalc, 150);
+}
+
+// Inputs that affect EV
+[
+  "cashValue",
+  "prevCashValue",
+  "ticketPrice",
+  "jackpotShare",
+  "fedTax",
+  "stateTax",
+  "stateSelect",
+].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.addEventListener("input", scheduleCalc);
+  el.addEventListener("change", scheduleCalc);
+});
+
+// Init
+initStateDropdown();
+
+// Autofill + auto-calc once on load
+autofillDefaultsFromWorker().then(runCalc);
+
 
 
   applyFromSelect();
