@@ -29,6 +29,11 @@ header h1 { margin: 0 0 0.25rem 0; }
 .ev-positive { color: #4ade80; } /* green */
 .ev-negative { color: #f87171; } /* red */
 
+#heroEV {
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
