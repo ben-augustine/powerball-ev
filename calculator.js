@@ -1,3 +1,7 @@
+// ==============================
+// State tax data
+// ==============================
+
 // Top marginal personal income tax rates (approx, 2025) as decimals
 const STATE_TAX_TOP_2025 = {
   AL:0.0415, AK:0.0000, AZ:0.0250, AR:0.0390, CA:0.1440,
@@ -27,15 +31,26 @@ const STATE_NAMES = {
   DC:"District of Columbia"
 };
 
+// ==============================
+// Worker endpoint
+// ==============================
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
-async function autofillFromWorker({ runAfter = false } = {}) {
-  const autoStatus = document.getElementById("autoStatus");
+
+// ==============================
+// Helpers
+// ==============================
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0;
+  return Math.min(1, Math.max(0, x));
+}
+
+// ==============================
+// Autofill defaults from Worker (no button)
+// ==============================
+async function autofillDefaultsFromWorker() {
   const cashEl = document.getElementById("cashValue");
   const prevEl = document.getElementById("prevCashValue");
-
   if (!cashEl || !prevEl) return;
-
-  if (autoStatus) autoStatus.textContent = "Fetching…";
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -44,26 +59,19 @@ async function autofillFromWorker({ runAfter = false } = {}) {
     const nextCash = j?.next?.cashValue;
     const prevCash = j?.prev?.cashValue;
 
-    if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) {
-      throw new Error("Missing cash values");
-    }
+    if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
 
-    cashEl.value = Math.round(nextCash);
-    prevEl.value = Math.round(prevCash);
-
-    if (autoStatus) {
-      const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
-      autoStatus.textContent = `Autofilled. Last fetch: ${when}`;
-    }
-
-    if (runAfter && typeof runCalc === "function") runCalc();
+    // Only autofill if user hasn't typed anything yet
+    if (!cashEl.value) cashEl.value = Math.round(nextCash);
+    if (!prevEl.value) prevEl.value = Math.round(prevCash);
   } catch (e) {
-    console.error(e);
-    if (autoStatus) autoStatus.textContent = "Autofill failed.";
+    console.error("Autofill failed:", e);
   }
 }
 
-
+// ==============================
+// State dropdown init
+// ==============================
 function initStateDropdown() {
   const sel = document.getElementById("stateSelect");
   const stateTaxInput = document.getElementById("stateTax");
@@ -111,56 +119,25 @@ function initStateDropdown() {
     }
   });
 
-// ==============================
-// Auto-recalculate on change
-// ==============================
-
-let calcTimer = null;
-function scheduleCalc() {
-  clearTimeout(calcTimer);
-  calcTimer = setTimeout(runCalc, 150);
-}
-
-// Inputs that affect EV
-[
-  "cashValue",
-  "prevCashValue",
-  "ticketPrice",
-  "jackpotShare",
-  "fedTax",
-  "stateTax",
-  "stateSelect",
-].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-
-  el.addEventListener("input", scheduleCalc);
-  el.addEventListener("change", scheduleCalc);
-});
-
-// Init
-initStateDropdown();
-
-// Autofill + auto-calc once on load
-autofillDefaultsFromWorker().then(runCalc);
-
-
-
   applyFromSelect();
 }
 
+// ==============================
+// Main calculation
+// ==============================
 function runCalc() {
-  const cashValue = Number(document.getElementById("cashValue").value);
-  const prevCashValue = Number(document.getElementById("prevCashValue").value);
+  const cashValue = Number(document.getElementById("cashValue")?.value);
+  const prevCashValue = Number(document.getElementById("prevCashValue")?.value);
 
-  const ticketPrice = Number(document.getElementById("ticketPrice").value);
-  const jackpotShare = Number(document.getElementById("jackpotShare").value);
-  const fedTax = Number(document.getElementById("fedTax").value);
-  const stateTax = Number(document.getElementById("stateTax").value);
+  const ticketPrice = Number(document.getElementById("ticketPrice")?.value || 2);
+  const jackpotShare = clamp01(Number(document.getElementById("jackpotShare")?.value || 0.70));
+  const fedTax = clamp01(Number(document.getElementById("fedTax")?.value || 0.37));
+  const stateTax = clamp01(Number(document.getElementById("stateTax")?.value || 0.00));
 
   const evOut = document.getElementById("evOut");
   const edgeOut = document.getElementById("edgeOut");
   const notesOut = document.getElementById("notesOut");
+  if (!evOut || !edgeOut || !notesOut) return;
 
   const res = window.PowerballEV.computeEV({
     cashValue, prevCashValue, ticketPrice, jackpotShare, fedTax, stateTax
@@ -186,6 +163,37 @@ function runCalc() {
     `Jackpot EV: ${m(res.jackpotEVPerTicket)}; Lower-tier EV: ${m(res.lowerEVPerTicket)}.`;
 }
 
-initStateDropdown();
+// ==============================
+// Auto-recalculate on change (debounced)
+// ==============================
+let calcTimer = null;
+function scheduleCalc() {
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(runCalc, 150);
+}
 
-document.getElementById("calcBtn").addEventListener("click", runCalc);
+function attachAutoCalc() {
+  [
+    "cashValue",
+    "prevCashValue",
+    "ticketPrice",
+    "jackpotShare",
+    "fedTax",
+    "stateTax",
+    "stateSelect",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", scheduleCalc);
+    el.addEventListener("change", scheduleCalc);
+  });
+}
+
+// ==============================
+// Init
+// ==============================
+initStateDropdown();
+attachAutoCalc();
+
+// Autofill defaults, then calculate once
+autofillDefaultsFromWorker().then(runCalc);
