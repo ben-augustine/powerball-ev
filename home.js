@@ -17,14 +17,6 @@ async function refreshHero() {
 
   heroMeta.textContent = "Updating…";
 
-  heroEV.classList.remove("ev-positive", "ev-negative");
-    if (res.totalEV >= ticketPrice) {
-  heroEV.classList.add("ev-positive");
-    } else {
-  heroEV.classList.add("ev-negative");
-    }
-
-
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
     const j = await r.json();
@@ -56,6 +48,11 @@ async function refreshHero() {
     heroTickets.textContent = Math.round(res.ticketsEst).toLocaleString();
     heroEV.textContent = res.formats.money(res.totalEV);
 
+    // ✅ EV color logic goes HERE (after res exists)
+    heroEV.classList.remove("ev-positive", "ev-negative");
+    if (res.totalEV >= ticketPrice) heroEV.classList.add("ev-positive");
+    else heroEV.classList.add("ev-negative");
+
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
     heroMeta.textContent = `Auto-updated hourly. Last fetch: ${when}.`;
   } catch (e) {
@@ -63,8 +60,3 @@ async function refreshHero() {
   }
 }
 
-const refreshBtn = document.getElementById("refreshBtn");
-if (refreshBtn) refreshBtn.addEventListener("click", refreshHero);
-
-refreshHero();
-setInterval(refreshHero, 60 * 60 * 1000);
