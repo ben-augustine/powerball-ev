@@ -17,6 +17,14 @@ async function refreshHero() {
 
   heroMeta.textContent = "Updating…";
 
+  heroEV.classList.remove("ev-positive", "ev-negative");
+    if (res.totalEV >= ticketPrice) {
+  heroEV.classList.add("ev-positive");
+    } else {
+  heroEV.classList.add("ev-negative");
+    }
+
+
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
     const j = await r.json();
