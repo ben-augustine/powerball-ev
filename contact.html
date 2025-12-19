@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Contact</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Powerball Expected Value</h1>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="calculator.html">Calculator</a>
+      <a href="explanation.html">How It Works</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Contact</h2>
+
+      <form id="contactForm">
+        <!-- Honeypot: bots fill it, humans don't -->
+        <input name="website" id="website" type="text" autocomplete="off"
+               style="position:absolute;left:-9999px;top:-9999px" tabindex="-1" />
+
+        <div class="grid">
+          <label>
+            Your email (optional)
+            <input id="fromEmail" name="fromEmail" type="email" placeholder="you@example.com" />
+          </label>
+
+          <label>
+            Subject
+            <input id="subject" name="subject" type="text" required maxlength="120"
+                   placeholder="Feedback / bug report" />
+          </label>
+
+          <label style="grid-column: 1 / -1;">
+            Message
+            <textarea id="message" name="message" required rows="6" maxlength="4000"
+                      placeholder="What should I fix / add / clarify?"></textarea>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="sendBtn" type="submit">Send</button>
+          <span id="status" class="muted"></span>
+        </div>
+
+        <p class="muted small">
+          This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
+        </p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="muted">
+    This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
+  </footer>
+
+  <script src="contact.js"></script>
+</body>
+</html>
