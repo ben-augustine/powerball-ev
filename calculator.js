@@ -182,8 +182,7 @@ async function autofillFromWorker() {
 function runCalc() {
   const evOut = document.getElementById("evOut");
   const edgeOut = document.getElementById("edgeOut");
-  const notesOut = document.getElementById("notesOut");
-  if (!evOut || !edgeOut || !notesOut) return;
+  if (!evOut || !edgeOut ||) return;
 
   const cashValue = numFrom("cashValue", NaN);
   const ticketsSold = numFrom("ticketsSold", NaN);
