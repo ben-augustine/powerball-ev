@@ -189,14 +189,12 @@ async function autofillFromWorker() {
 // ==============================
 function runCalc() {
   const evOut = document.getElementById("evOut");
-  const edgeOut = document.getElementById("edgeOut");
-  if (!evOut || !edgeOut) return;
+  if (!evOut) return;
 
   // If calc-core didn't load, keep it quiet (no notes)
   if (!window.PowerballEV || typeof window.PowerballEV.computeEV !== "function") {
     console.error("calc-core.js not loaded: window.PowerballEV is missing");
     evOut.textContent = "—";
-    edgeOut.textContent = "—";
     return;
   }
 
@@ -209,7 +207,6 @@ function runCalc() {
   // If required inputs missing, show dashes (no notes)
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
     evOut.textContent = "—";
-    edgeOut.textContent = "—";
     return;
   }
 
@@ -237,13 +234,11 @@ function runCalc() {
     // quiet fail (no notes)
     console.error("computeEV error:", res?.error || res);
     evOut.textContent = "—";
-    edgeOut.textContent = "—";
     return;
   }
 
   const m = res.formats.money;
   evOut.textContent = m(res.totalEV);
-  edgeOut.textContent = m(res.totalEV - DEFAULT_TICKET_PRICE);
 }
 
 // ==============================
