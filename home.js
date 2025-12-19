@@ -1,5 +1,5 @@
 // Put your Worker endpoint here:
-const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=2";
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
 
 function readNum(id) {
   const el = document.getElementById(id);
