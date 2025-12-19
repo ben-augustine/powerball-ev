@@ -2,7 +2,6 @@
 // State tax data
 // ==============================
 
-// Top marginal personal income tax rates (approx, 2025) as decimals
 const STATE_TAX_TOP_2025 = {
   AL:0.0415, AK:0.0000, AZ:0.0250, AR:0.0390, CA:0.1440,
   CO:0.0440, CT:0.0699, DE:0.0785, FL:0.0000, GA:0.0539,
@@ -45,31 +44,6 @@ function clamp01(x) {
 }
 
 // ==============================
-// Autofill defaults from Worker (no button)
-// ==============================
-async function autofillDefaultsFromWorker() {
-  const cashEl = document.getElementById("cashValue");
-  const prevEl = document.getElementById("prevCashValue");
-  if (!cashEl || !prevEl) return;
-
-  try {
-    const r = await fetch(WORKER_URL, { cache: "no-store" });
-    const j = await r.json();
-
-    const nextCash = j?.next?.cashValue;
-    const prevCash = j?.prev?.cashValue;
-
-    if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
-
-    // Only autofill if user hasn't typed anything yet
-    if (!cashEl.value) cashEl.value = Math.round(nextCash);
-    if (!prevEl.value) prevEl.value = Math.round(prevCash);
-  } catch (e) {
-    console.error("Autofill failed:", e);
-  }
-}
-
-// ==============================
 // State dropdown init
 // ==============================
 function initStateDropdown() {
@@ -94,7 +68,6 @@ function initStateDropdown() {
     sel.appendChild(opt);
   }
 
-  // default: manual
   sel.value = "";
   stateTaxInput.readOnly = false;
 
@@ -123,11 +96,71 @@ function initStateDropdown() {
 }
 
 // ==============================
-// Main calculation
+// Autofill cash values from Worker (defaults only)
+// ==============================
+async function autofillDefaultsFromWorker() {
+  const cashEl = document.getElementById("cashValue");
+  const prevEl = document.getElementById("prevCashValue");
+  if (!cashEl || !prevEl) return;
+
+  try {
+    const r = await fetch(WORKER_URL, { cache: "no-store" });
+    const j = await r.json();
+
+    const nextCash = j?.next?.cashValue;
+    const prevCash = j?.prev?.cashValue;
+
+    if (!Number.isFinite(nextCash) || !Number.isFinite(prevCash)) return;
+
+    if (!cashEl.value) cashEl.value = Math.round(nextCash);
+    if (!prevEl.value) prevEl.value = Math.round(prevCash);
+  } catch (e) {
+    console.error("Autofill failed:", e);
+  }
+}
+
+// ==============================
+// Tickets override behavior
+// ==============================
+function initTicketsOverrideUX() {
+  const prevEl = document.getElementById("prevCashValue");
+  const ticketsEl = document.getElementById("ticketsSold");
+  if (!prevEl || !ticketsEl) return;
+
+  function syncLocks() {
+    const tickets = Number(ticketsEl.value);
+    const hasTickets = Number.isFinite(tickets) && tickets > 0;
+
+    if (hasTickets) {
+      // tickets override prevCashValue
+      prevEl.value = "";
+      prevEl.readOnly = true;
+    } else {
+      prevEl.readOnly = false;
+    }
+  }
+
+  ticketsEl.addEventListener("input", syncLocks);
+  ticketsEl.addEventListener("change", syncLocks);
+
+  // If user clicks into prev cash, clear tickets override
+  prevEl.addEventListener("focus", () => {
+    if (ticketsEl.value) {
+      ticketsEl.value = "";
+      prevEl.readOnly = false;
+    }
+  });
+
+  syncLocks();
+}
+
+// ==============================
+// Main calculation (auto)
 // ==============================
 function runCalc() {
   const cashValue = Number(document.getElementById("cashValue")?.value);
   const prevCashValue = Number(document.getElementById("prevCashValue")?.value);
+  const ticketsSold = Number(document.getElementById("ticketsSold")?.value);
 
   const ticketPrice = Number(document.getElementById("ticketPrice")?.value || 2);
   const jackpotShare = clamp01(Number(document.getElementById("jackpotShare")?.value || 0.70));
@@ -140,7 +173,13 @@ function runCalc() {
   if (!evOut || !edgeOut || !notesOut) return;
 
   const res = window.PowerballEV.computeEV({
-    cashValue, prevCashValue, ticketPrice, jackpotShare, fedTax, stateTax
+    cashValue,
+    prevCashValue,
+    ticketsSold,
+    ticketPrice,
+    jackpotShare,
+    fedTax,
+    stateTax
   });
 
   if (!res.ok) {
@@ -154,13 +193,15 @@ function runCalc() {
   evOut.textContent = m(res.totalEV);
   edgeOut.textContent = m(res.totalEV - ticketPrice);
 
+  const method = res.usedManualTickets ? "manual tickets"
+               : res.usedDelta ? "Δcash"
+               : "fallback";
+
   notesOut.textContent =
     `EV includes jackpot + all lower prizes (no Power Play). ` +
-    `Sales est: ${Math.round(res.ticketsEst).toLocaleString()} ` +
-    `(method: ${res.usedDelta ? "Δcash" : "fallback"}). ` +
+    `Tickets: ${Math.round(res.ticketsEst).toLocaleString()} (method: ${method}). ` +
     `λ(other winners): ${res.lambdaOthers.toFixed(3)}. ` +
-    `Tax: ${(res.totalTax * 100).toFixed(1)}%. ` +
-    `Jackpot EV: ${m(res.jackpotEVPerTicket)}; Lower-tier EV: ${m(res.lowerEVPerTicket)}.`;
+    `Tax: ${(res.totalTax * 100).toFixed(1)}%.`;
 }
 
 // ==============================
@@ -176,6 +217,7 @@ function attachAutoCalc() {
   [
     "cashValue",
     "prevCashValue",
+    "ticketsSold",
     "ticketPrice",
     "jackpotShare",
     "fedTax",
@@ -193,7 +235,7 @@ function attachAutoCalc() {
 // Init
 // ==============================
 initStateDropdown();
+initTicketsOverrideUX();
 attachAutoCalc();
 
-// Autofill defaults, then calculate once
 autofillDefaultsFromWorker().then(runCalc);
