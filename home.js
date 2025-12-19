@@ -1,6 +1,6 @@
 // Put your Worker endpoint here:
-const WORKER_URL =
-  "https://powerball-ev-data.ben-augustine319.workers.dev/";
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+
 
 
 function readNum(id) {
@@ -56,5 +56,8 @@ async function refreshHero() {
 
 document.getElementById("refreshBtn").addEventListener("click", refreshHero);
 
-refreshHero();
+refreshHero(
+  const cashValue = j?.next?.cashValue;
+  const prevCashValue = j?.prev?.cashValue;
+);
 setInterval(refreshHero, 60 * 60 * 1000);
