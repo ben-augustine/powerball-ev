@@ -1,5 +1,5 @@
 // Put your Worker endpoint here:
-const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=2";
 
 
 
