@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Will Someone Win Powerball Tonight?</title>
+  <title>Will Anyone Win The Powerball?</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 
@@ -19,7 +19,7 @@
     <nav class="nav">
       <a href="index.html">Home</a>
       <a href="calculator.html">Calculator</a>
-      <a href="winner.html" aria-current="page">Will Someone Win?</a>
+      <a href="winner.html" aria-current="page">Will Anyone Win?</a>
       <a href="explanation.html">How It Works</a>
       <a href="contact.html">Contact</a>
     </nav>
@@ -31,12 +31,12 @@
 
       <div class="grid">
         <label>
-          Tickets sold (optional override)
+          Tickets Sold
           <input id="ticketsOverride" type="number" inputmode="numeric" placeholder="Leave blank to use auto estimate" />
         </label>
 
         <label>
-          Jackpot odds (1 in p)
+          Potential Outcomes
           <input id="pOut" type="text" readonly />
         </label>
       </div>
@@ -47,20 +47,14 @@
           <div id="winOut" class="value">—</div>
         </div>
         <div>
-          <div class="label">Chance of a rollover (no jackpot winner)</div>
+          <div class="label">Chance of a rollover</div>
           <div id="rollOut" class="value">—</div>
         </div>
         <div>
-          <div class="label">Tickets used in calculation</div>
-          <div id="nOut" class="small">—</div>
-        </div>
       </div>
 
       <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">Updating…</div>
-
-      <p class="small muted" style="margin-top: 0.75rem;">
-        Assumes each ticket is an independent random pick. (Good approximation.)
-      </p>
+        
     </section>
   </main>
 
