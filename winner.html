@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Will Someone Win Powerball Tonight?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Favicons (keep consistent with your other pages) -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+</head>
+<body>
+  <header>
+    <h1>Powerball Expected Value</h1>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="calculator.html">Calculator</a>
+      <a href="winner.html" aria-current="page">Will Someone Win?</a>
+      <a href="explanation.html">How It Works</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Will someone win the jackpot tonight?</h2>
+
+      <div class="grid">
+        <label>
+          Tickets sold (optional override)
+          <input id="ticketsOverride" type="number" inputmode="numeric" placeholder="Leave blank to use auto estimate" />
+        </label>
+
+        <label>
+          Jackpot odds (1 in p)
+          <input id="pOut" type="text" readonly />
+        </label>
+      </div>
+
+      <div class="results" style="margin-top: 1rem;">
+        <div>
+          <div class="label">Chance someone wins the jackpot</div>
+          <div id="winOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Chance of a rollover (no jackpot winner)</div>
+          <div id="rollOut" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Tickets used in calculation</div>
+          <div id="nOut" class="small">—</div>
+        </div>
+      </div>
+
+      <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">Updating…</div>
+
+      <p class="small muted" style="margin-top: 0.75rem;">
+        Assumes each ticket is an independent random pick. (Good approximation.)
+      </p>
+    </section>
+  </main>
+
+  <footer class="muted">
+    This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
+  </footer>
+
+  <script src="winner.js"></script>
+</body>
+</html>
