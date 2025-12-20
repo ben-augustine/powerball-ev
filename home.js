@@ -60,7 +60,7 @@ async function refreshHero() {
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
     // Make this more discreet: just a subtle timestamp
-    heroMeta.textContent = `Updated: ${when}`;
+    heroMeta.textContent = `Updated: Today, ${when}`;
   } catch (e) {
     console.error(e);
     heroMeta.textContent = "Update failed.";
