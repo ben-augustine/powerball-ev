@@ -21,42 +21,22 @@
     <section class="card">
       <h2>Contact</h2>
 
-      <form id="contactForm">
-        <!-- Honeypot: bots fill it, humans don't -->
-        <input name="website" id="website" type="text" autocomplete="off"
-               style="position:absolute;left:-9999px;top:-9999px" tabindex="-1" />
+      <p class="muted">
+        Feedback, corrections, or questions about the math are welcome.
+      </p>
 
-        <div class="grid">
-          <label>
-            Your email (optional)
-            <input id="fromEmail" name="fromEmail" type="email" placeholder="you@example.com" />
-          </label>
-
-          <label>
-            Subject
-            <input id="subject" name="subject" type="text" required maxlength="120"
-                   placeholder="Feedback / bug report" />
-          </label>
-
-          <label style="grid-column: 1 / -1;">
-            Message
-            <textarea id="message" name="message" required rows="6" maxlength="4000"
-                      placeholder=""></textarea>
-          </label>
-        </div>
-
-        <div class="row">
-          <button id="sendBtn" type="submit">Send</button>
-          <span id="status" class="muted"></span>
-        </div>
-      </form>
+      <div class="row">
+        <a
+          class="button"
+          href="mailto:Powerball.EV.math@gmail.com
+            ?subject=Powerball%20EV%20Feedback
+            &body=Message:%0D%0A%0D%0A
+            (Optional)%20Your%20email:%0D%0A"
+        >
+          Email me
+        </a>
+      </div>
     </section>
   </main>
-
-  <footer class="muted">
-    This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
-  </footer>
-
-  <script src="contact.js"></script>
 </body>
 </html>
