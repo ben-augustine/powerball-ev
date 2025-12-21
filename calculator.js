@@ -145,6 +145,7 @@ function runCalc() {
 
   const fedTax = clamp01(numFrom("fedTax", 0.37));
   const stateTax = clamp01(numFrom("stateTax", 0.00));
+  const combinedTax = clamp01(fedTax + stateTax);
 
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
     evOut.textContent = "—";
@@ -156,9 +157,18 @@ function runCalc() {
     prevCashValue = computePrevCashFromTickets(cashValue, ticketsSold);
   }
 
-  // --- CHANGE START ---
-  // Compute a no-tax EV so lower tiers remain untaxed.
-  const resNoTax = window.PowerballEV.computeEV({
+  // Lower tiers: compute with cashValue=0 and NO taxes
+  const resLowerNoTax = window.PowerballEV.computeEV({
+    cashValue: 0,
+    prevCashValue: NaN,
+    ticketPrice: EV_ENGINE_TICKET_PRICE,
+    jackpotShare: EV_ENGINE_JACKPOT_SHARE,
+    fedTax: 0,
+    stateTax: 0
+  });
+
+  // Full EV (lower + jackpot): compute with real cashValue and NO taxes
+  const resTotalNoTax = window.PowerballEV.computeEV({
     cashValue,
     prevCashValue,
     ticketPrice: EV_ENGINE_TICKET_PRICE,
@@ -167,60 +177,17 @@ function runCalc() {
     stateTax: 0
   });
 
-  if (!resNoTax || !resNoTax.ok) {
+  if (!resLowerNoTax || !resLowerNoTax.ok || !resTotalNoTax || !resTotalNoTax.ok) {
     evOut.textContent = "—";
     return;
   }
 
-  // We need jackpot vs lower-tier split from the engine to tax only jackpot.
-  // This searches a few likely locations without changing your engine.
-  const lowerEV =
-    resNoTax?.breakdown?.lowerTierEV ??
-    resNoTax?.breakdown?.lowerEV ??
-    resNoTax?.parts?.lowerTierEV ??
-    resNoTax?.parts?.lowerEV ??
-    resNoTax?.lowerTierEV ??
-    resNoTax?.lowerEV ??
-    NaN;
+  const lowerEV = resLowerNoTax.totalEV;
+  const jackpotEVPreTax = resTotalNoTax.totalEV - resLowerNoTax.totalEV;
+  const totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
 
-  const jackpotEVPreTax =
-    resNoTax?.breakdown?.jackpotEV ??
-    resNoTax?.parts?.jackpotEV ??
-    resNoTax?.jackpotEV ??
-    NaN;
-
-  const combinedTax = clamp01(fedTax + stateTax);
-
-  // If we can split components, apply taxes ONLY to jackpot.
-  // Otherwise fall back to the engine's regular totalEV (taxed everywhere),
-  // because we cannot correctly isolate lower tiers without a breakdown.
-  let totalEV = NaN;
-
-  if (Number.isFinite(lowerEV) && Number.isFinite(jackpotEVPreTax)) {
-    totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
-  } else {
-    const resTaxedAll = window.PowerballEV.computeEV({
-      cashValue,
-      prevCashValue,
-      ticketPrice: EV_ENGINE_TICKET_PRICE,
-      jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
-      fedTax,
-      stateTax
-    });
-
-    if (!resTaxedAll || !resTaxedAll.ok) {
-      evOut.textContent = "—";
-      return;
-    }
-
-    totalEV = resTaxedAll.totalEV;
-    // Keep formats from taxed run if needed
-    resNoTax.formats = resTaxedAll.formats || resNoTax.formats;
-  }
-
-  const m = resNoTax.formats.money;
+  const m = resTotalNoTax.formats.money;
   evOut.textContent = m(totalEV);
-  // --- CHANGE END ---
 }
 
 // ==============================
