@@ -194,6 +194,12 @@ function runCalc() {
 // Init
 // ==============================
 window.addEventListener("DOMContentLoaded", async () => {
+  // NEW: re-run calc whenever any input changes
+  document.querySelectorAll("input, select, textarea").forEach((el) => {
+    el.addEventListener("input", scheduleCalc);
+    el.addEventListener("change", scheduleCalc);
+  });
+
   await autofillFromWorker();
   runCalc();
 });
