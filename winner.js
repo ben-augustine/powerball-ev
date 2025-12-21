@@ -1,3 +1,5 @@
+// winner.js
+
 // Worker endpoint (use v=1 — you already saw the non-v query sometimes returns nulls)
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
 
@@ -50,6 +52,7 @@ function estimateTicketsFromCashDelta({ cashValue, prevCashValue, jackpotShare, 
 
 async function loadAutoEstimate() {
   const metaOut = document.getElementById("metaOut");
+  const nOut = document.getElementById("nOut"); // <-- FIX: define it here
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -68,7 +71,9 @@ async function loadAutoEstimate() {
       jackpotShare: DEFAULT_JACKPOT_SHARE,
       ticketPrice: DEFAULT_TICKET_PRICE
     });
-    if (nOut) nOut.value = n.toLocaleString();
+
+    // Optional: show something immediately even before renderWithN runs
+    if (Number.isFinite(n) && n > 0 && nOut) nOut.value = formatInt(n);
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
     if (metaOut) metaOut.textContent = `Auto estimate updated: ${when}.`;
@@ -77,6 +82,7 @@ async function loadAutoEstimate() {
   } catch (e) {
     console.error(e);
     if (metaOut) metaOut.textContent = "Auto estimate failed (worker fetch/parse).";
+    if (nOut) nOut.value = "—";
     return NaN;
   }
 }
@@ -85,15 +91,15 @@ function renderWithN(n, sourceLabel) {
   const winOut = document.getElementById("winOut");
   const rollOut = document.getElementById("rollOut");
   const nOut = document.getElementById("nOut");
+  const pOut = document.getElementById("pOut");
 
   const p = ODDS_JACKPOT;
-  const pOut = document.getElementById("pOut");
   if (pOut) pOut.value = p.toLocaleString();
 
   if (!Number.isFinite(n) || n <= 0) {
     if (winOut) winOut.textContent = "—";
     if (rollOut) rollOut.textContent = "—";
-    if (nOut) nOut.textContent = "—";
+    if (nOut) nOut.value = "—"; // <-- FIX: input uses value
     return;
   }
 
@@ -102,14 +108,14 @@ function renderWithN(n, sourceLabel) {
 
   if (winOut) winOut.textContent = formatPct(winProb);
   if (rollOut) rollOut.textContent = formatPct(rollProb);
-  if (nOut) nOut.textContent = `${formatInt(n)} (${sourceLabel})`;
+  if (nOut) nOut.value = `${formatInt(n)} (${sourceLabel})`; // <-- FIX: value
 }
 
 async function main() {
   const overrideEl = document.getElementById("ticketsOverride");
 
   // Initial load: auto estimate from Worker
-  const autoN = await loadAutoEstimate();
+  let autoN = await loadAutoEstimate();
   renderWithN(autoN, "auto estimate");
 
   // If user types an override, use it immediately
@@ -134,14 +140,11 @@ async function main() {
   // Refresh auto estimate hourly (only matters if override is blank)
   setInterval(async () => {
     const newAutoN = await loadAutoEstimate();
-    // only update stored autoN if it’s valid
     if (Number.isFinite(newAutoN) && newAutoN > 0) {
-      // update reference
-      // eslint-disable-next-line no-unused-vars
-      // (we just re-render based on whether override exists)
+      autoN = newAutoN; // <-- FIX: keep autoN up to date for schedule() fallback
       const overrideN = readNumber(overrideEl);
       if (!Number.isFinite(overrideN) || overrideN <= 0) {
-        renderWithN(newAutoN, "auto estimate");
+        renderWithN(autoN, "auto estimate");
       }
     }
   }, 60 * 60 * 1000);
