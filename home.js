@@ -39,25 +39,44 @@ async function refreshHero() {
     // Defaults for home (no inputs)
     const fedTax = 0.37;
     const stateTax = 0.00;
+    const combinedTax = Math.min(1, Math.max(0, fedTax + stateTax));
 
-    const res = window.PowerballEV.computeEV({
+    // --- CHANGE START ---
+    // Lower tiers (no tax): compute with cashValue=0
+    const resLowerNoTax = window.PowerballEV.computeEV({
+      cashValue: 0,
+      prevCashValue: NaN,
+      ticketPrice: EV_ENGINE_TICKET_PRICE,
+      jackpotShare: EV_ENGINE_JACKPOT_SHARE,
+      fedTax: 0,
+      stateTax: 0,
+    });
+
+    // Total EV (no tax): compute with real cashValue
+    const resTotalNoTax = window.PowerballEV.computeEV({
       cashValue,
       prevCashValue,
       ticketPrice: EV_ENGINE_TICKET_PRICE,
       jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
-      fedTax,
-      stateTax,
+      fedTax: 0,
+      stateTax: 0,
     });
 
-    if (!res.ok) throw new Error(res.error);
+    if (!resLowerNoTax?.ok) throw new Error(resLowerNoTax?.error || "EV lower-tier calc failed");
+    if (!resTotalNoTax?.ok) throw new Error(resTotalNoTax?.error || "EV total calc failed");
 
-    heroCash.textContent = res.formats.money0(cashValue);
+    const lowerEV = resLowerNoTax.totalEV;
+    const jackpotEVPreTax = resTotalNoTax.totalEV - resLowerNoTax.totalEV;
+    const totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
+    // --- CHANGE END ---
+
+    heroCash.textContent = resTotalNoTax.formats.money0(cashValue);
     heroTickets.textContent = Math.round(ticketsSold).toLocaleString();
-    heroEV.textContent = res.formats.money(res.totalEV);
+    heroEV.textContent = resTotalNoTax.formats.money(totalEV);
 
     // EV color (green if >= $2, red otherwise)
     heroEV.classList.remove("ev-positive", "ev-negative");
-    if (res.totalEV >= DISPLAY_TICKET_PRICE) heroEV.classList.add("ev-positive");
+    if (totalEV >= DISPLAY_TICKET_PRICE) heroEV.classList.add("ev-positive");
     else heroEV.classList.add("ev-negative");
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
