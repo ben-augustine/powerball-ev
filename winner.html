@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Favicons (keep consistent with your other pages) -->
+  <!-- Favicons -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -46,14 +46,16 @@
           <div class="label">Chance someone wins the jackpot</div>
           <div id="winOut" class="value">—</div>
         </div>
+
         <div>
           <div class="label">Chance of a rollover</div>
           <div id="rollOut" class="value">—</div>
         </div>
       </div>
 
-      <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">Updating…</div>
-        
+      <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">
+        Updating…
+      </div>
     </section>
   </main>
 
@@ -61,6 +63,7 @@
     This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
   </footer>
 
-  <script src="winner.js"></script>
+  <!-- cache-busted to force update -->
+  <script src="winner.js?v=3"></script>
 </body>
 </html>
