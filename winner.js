@@ -108,7 +108,7 @@ function renderWithN(n, sourceLabel) {
 
   if (winOut) winOut.textContent = formatPct(winProb);
   if (rollOut) rollOut.textContent = formatPct(rollProb);
-  if (nOut) nOut.value = `${formatInt(n)} (${sourceLabel})`; // <-- FIX: value
+  if (nOut) nOut.value = ${formatInt(n)};
 }
 
 async function main() {
