@@ -1,12 +1,7 @@
 // winner.js
-
-// Worker endpoint (use v=1 — you already saw the non-v query sometimes returns nulls)
 const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
+const DEFAULT_ODDS_JACKPOT = 292201338;
 
-// Powerball jackpot odds
-const ODDS_JACKPOT = 292201338;
-
-// Defaults for estimating tickets from cash delta
 const DEFAULT_TICKET_PRICE = 2;
 const DEFAULT_JACKPOT_SHARE = 0.35;
 
@@ -36,7 +31,8 @@ function formatPct(x) {
 // P(at least one winner) = 1 - (1 - 1/p)^n
 function probAtLeastOneWinner(n, p) {
   if (!Number.isFinite(n) || n <= 0) return 0;
-  // Use log for stability: (1 - 1/p)^n = exp(n * ln(1 - 1/p))
+  if (!Number.isFinite(p) || p <= 1) return 0;
+
   const q = 1 - 1 / p;
   return 1 - Math.exp(n * Math.log(q));
 }
@@ -50,9 +46,25 @@ function estimateTicketsFromCashDelta({ cashValue, prevCashValue, jackpotShare, 
   return delta / (js * tp);
 }
 
+function render(n, p) {
+  const winOut = document.getElementById("winOut");
+  const rollOut = document.getElementById("rollOut");
+
+  if (!Number.isFinite(n) || n <= 0 || !Number.isFinite(p) || p <= 1) {
+    if (winOut) winOut.textContent = "—";
+    if (rollOut) rollOut.textContent = "—";
+    return;
+  }
+
+  const winProb = probAtLeastOneWinner(n, p);
+  const rollProb = 1 - winProb;
+
+  if (winOut) winOut.textContent = formatPct(winProb);
+  if (rollOut) rollOut.textContent = formatPct(rollProb);
+}
+
 async function loadAutoEstimate() {
   const metaOut = document.getElementById("metaOut");
-  const nOut = document.getElementById("nOut"); // <-- FIX: define it here
 
   try {
     const r = await fetch(WORKER_URL, { cache: "no-store" });
@@ -72,9 +84,6 @@ async function loadAutoEstimate() {
       ticketPrice: DEFAULT_TICKET_PRICE
     });
 
-    // Optional: show something immediately even before renderWithN runs
-    if (Number.isFinite(n) && n > 0 && nOut) nOut.value = formatInt(n);
-
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
     if (metaOut) metaOut.textContent = `Auto estimate updated: ${when}.`;
 
@@ -82,71 +91,58 @@ async function loadAutoEstimate() {
   } catch (e) {
     console.error(e);
     if (metaOut) metaOut.textContent = "Auto estimate failed (worker fetch/parse).";
-    if (nOut) nOut.value = "—";
     return NaN;
   }
 }
 
-function renderWithN(n, sourceLabel) {
-  const winOut = document.getElementById("winOut");
-  const rollOut = document.getElementById("rollOut");
-  const nOut = document.getElementById("nOut");
-  const pOut = document.getElementById("pOut");
+function wireLiveUpdates(getAutoN) {
+  const nIn = document.getElementById("nIn");
+  const pIn = document.getElementById("pIn");
+  const useAutoBtn = document.getElementById("useAutoBtn");
 
-  const p = ODDS_JACKPOT;
-  if (pOut) pOut.value = p.toLocaleString();
-
-  if (!Number.isFinite(n) || n <= 0) {
-    if (winOut) winOut.textContent = "—";
-    if (rollOut) rollOut.textContent = "—";
-    if (nOut) nOut.value = "—"; // <-- FIX: input uses value
-    return;
+  function recompute() {
+    const n = readNumber(nIn);
+    const p = readNumber(pIn);
+    render(n, p);
   }
 
-  const winProb = probAtLeastOneWinner(n, p);
-  const rollProb = 1 - winProb;
+  // Live update when typing
+  if (nIn) nIn.addEventListener("input", recompute);
+  if (pIn) pIn.addEventListener("input", recompute);
 
-  if (winOut) winOut.textContent = formatPct(winProb);
-  if (rollOut) rollOut.textContent = formatPct(rollProb);
-  if (nOut) nOut.value = ${formatInt(n)};
+  // Restore auto estimate
+  if (useAutoBtn) {
+    useAutoBtn.addEventListener("click", async () => {
+      const autoN = await getAutoN();
+      if (Number.isFinite(autoN) && autoN > 0 && nIn) nIn.value = formatInt(autoN);
+      recompute();
+    });
+  }
 }
 
 async function main() {
-  const overrideEl = document.getElementById("ticketsOverride");
+  const nIn = document.getElementById("nIn");
+  const pIn = document.getElementById("pIn");
 
-  // Initial load: auto estimate from Worker
-  let autoN = await loadAutoEstimate();
-  renderWithN(autoN, "auto estimate");
+  // Set default odds in the box
+  if (pIn) pIn.value = DEFAULT_ODDS_JACKPOT.toLocaleString();
 
-  // If user types an override, use it immediately
-  let timer = null;
-  function schedule() {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      const overrideN = readNumber(overrideEl);
-      if (Number.isFinite(overrideN) && overrideN > 0) {
-        renderWithN(overrideN, "manual override");
-      } else {
-        renderWithN(autoN, "auto estimate");
-      }
-    }, 120);
+  // Load auto estimate, put it in the box, and render
+  async function getAutoN() {
+    return await loadAutoEstimate();
   }
 
-  if (overrideEl) {
-    overrideEl.addEventListener("input", schedule);
-    overrideEl.addEventListener("change", schedule);
-  }
+  const autoN = await getAutoN();
+  if (Number.isFinite(autoN) && autoN > 0 && nIn) nIn.value = formatInt(autoN);
 
-  // Refresh auto estimate hourly (only matters if override is blank)
+  render(readNumber(nIn), readNumber(pIn));
+
+  // Enable live typing updates
+  wireLiveUpdates(getAutoN);
+
+  // Refresh auto estimate hourly (only matters if the user clicks Use Auto Estimate)
   setInterval(async () => {
-    const newAutoN = await loadAutoEstimate();
-    if (Number.isFinite(newAutoN) && newAutoN > 0) {
-      autoN = newAutoN; // <-- FIX: keep autoN up to date for schedule() fallback
-      const overrideN = readNumber(overrideEl);
-      if (!Number.isFinite(overrideN) || overrideN <= 0) {
-        renderWithN(autoN, "auto estimate");
-      }
-    }
+    await loadAutoEstimate(); // updates meta timestamp
   }, 60 * 60 * 1000);
 }
 
