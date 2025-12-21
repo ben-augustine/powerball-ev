@@ -156,22 +156,71 @@ function runCalc() {
     prevCashValue = computePrevCashFromTickets(cashValue, ticketsSold);
   }
 
-  const res = window.PowerballEV.computeEV({
+  // --- CHANGE START ---
+  // Compute a no-tax EV so lower tiers remain untaxed.
+  const resNoTax = window.PowerballEV.computeEV({
     cashValue,
     prevCashValue,
     ticketPrice: EV_ENGINE_TICKET_PRICE,
     jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
-    fedTax,
-    stateTax
+    fedTax: 0,
+    stateTax: 0
   });
 
-  if (!res || !res.ok) {
+  if (!resNoTax || !resNoTax.ok) {
     evOut.textContent = "—";
     return;
   }
 
-  const m = res.formats.money;
-  evOut.textContent = m(res.totalEV);
+  // We need jackpot vs lower-tier split from the engine to tax only jackpot.
+  // This searches a few likely locations without changing your engine.
+  const lowerEV =
+    resNoTax?.breakdown?.lowerTierEV ??
+    resNoTax?.breakdown?.lowerEV ??
+    resNoTax?.parts?.lowerTierEV ??
+    resNoTax?.parts?.lowerEV ??
+    resNoTax?.lowerTierEV ??
+    resNoTax?.lowerEV ??
+    NaN;
+
+  const jackpotEVPreTax =
+    resNoTax?.breakdown?.jackpotEV ??
+    resNoTax?.parts?.jackpotEV ??
+    resNoTax?.jackpotEV ??
+    NaN;
+
+  const combinedTax = clamp01(fedTax + stateTax);
+
+  // If we can split components, apply taxes ONLY to jackpot.
+  // Otherwise fall back to the engine's regular totalEV (taxed everywhere),
+  // because we cannot correctly isolate lower tiers without a breakdown.
+  let totalEV = NaN;
+
+  if (Number.isFinite(lowerEV) && Number.isFinite(jackpotEVPreTax)) {
+    totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
+  } else {
+    const resTaxedAll = window.PowerballEV.computeEV({
+      cashValue,
+      prevCashValue,
+      ticketPrice: EV_ENGINE_TICKET_PRICE,
+      jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
+      fedTax,
+      stateTax
+    });
+
+    if (!resTaxedAll || !resTaxedAll.ok) {
+      evOut.textContent = "—";
+      return;
+    }
+
+    totalEV = resTaxedAll.totalEV;
+    // Keep formats from taxed run if needed
+    resNoTax.formats = resTaxedAll.formats || resNoTax.formats;
+  }
+
+  const m = resNoTax.formats.money;
+  evOut.textContent = m(totalEV);
+  // --- CHANGE END ---
 }
 
 // ==============================
