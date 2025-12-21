@@ -9,7 +9,7 @@ const CONTRIBUTION_PER_TICKET = 0.70;
 // tickets = Δcash / (jackpotShare * ticketPrice)
 // We want tickets = Δcash / 0.70
 // So ticketPrice=1 and jackpotShare=1.0 (do NOT distort payouts)
-const EV_ENGINE_TICKET_PRICE = 1;
+const EV_ENGINE_TICKET_PRICE = 2;
 const EV_ENGINE_JACKPOT_SHARE = 1.0;   // FIX
 
 async function refreshHero() {
