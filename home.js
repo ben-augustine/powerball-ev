@@ -5,10 +5,12 @@ const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/power
 const DISPLAY_TICKET_PRICE = 2;
 const CONTRIBUTION_PER_TICKET = 0.70;
 
-// For computeEV ticket-estimation: tickets = Δcash / (jackpotShare * ticketPrice)
-// We want tickets = Δcash / 0.70  => use 0.70 * 1
+// For computeEV ticket-estimation:
+// tickets = Δcash / (jackpotShare * ticketPrice)
+// We want tickets = Δcash / 0.70
+// So ticketPrice=1 and jackpotShare=1.0 (do NOT distort payouts)
 const EV_ENGINE_TICKET_PRICE = 1;
-const EV_ENGINE_JACKPOT_SHARE = 0.70;
+const EV_ENGINE_JACKPOT_SHARE = 1.0;   // FIX
 
 async function refreshHero() {
   const heroCash = document.getElementById("heroCash");
@@ -42,7 +44,7 @@ async function refreshHero() {
       cashValue,
       prevCashValue,
       ticketPrice: EV_ENGINE_TICKET_PRICE,
-      jackpotShare: EV_ENGINE_JACKPOT_SHARE,
+      jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
       fedTax,
       stateTax,
     });
@@ -59,7 +61,6 @@ async function refreshHero() {
     else heroEV.classList.add("ev-negative");
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
-    // Make this more discreet: just a subtle timestamp
     heroMeta.textContent = `Updated: ${when}`;
   } catch (e) {
     console.error(e);
