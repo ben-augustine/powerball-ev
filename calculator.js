@@ -97,52 +97,33 @@ function scheduleCalc() {
 }
 
 // ==============================
-// State dropdown -> stateTax wiring
+// State dropdown wiring (YOUR HTML uses id="stateSelect")
 // ==============================
-function getStateSelect() {
-  return (
-    document.getElementById("state") ||
-    document.getElementById("stateCode") ||
-    document.getElementById("stateSelect") ||
-    document.querySelector('select[name="state"]') ||
-    document.querySelector('select[name="stateCode"]')
-  );
-}
+function populateStateSelect() {
+  const sel = document.getElementById("stateSelect");
+  if (!sel) return;
 
-function ensureStateSelectOptions(stateEl) {
-  if (!stateEl) return;
-  // If it already has options, leave it alone.
-  if (stateEl.options && stateEl.options.length > 1) return;
+  // If options already exist, don't touch them
+  if (sel.options && sel.options.length > 0) return;
 
-  // Build options: value = state code, label = full name
   const entries = Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
-  stateEl.innerHTML = "";
   for (const [code, name] of entries) {
     const opt = document.createElement("option");
     opt.value = code;
     opt.textContent = name;
-    stateEl.appendChild(opt);
+    sel.appendChild(opt);
   }
+
+  // Default to Iowa if nothing selected (matches you)
+  if (!sel.value) sel.value = "IA";
 }
 
-function syncStateTaxFromState() {
-  const stateEl = getStateSelect();
+function syncStateTaxFromSelect() {
+  const sel = document.getElementById("stateSelect");
   const stateTaxEl = document.getElementById("stateTax");
-  if (!stateEl || !stateTaxEl) return;
+  if (!sel || !stateTaxEl) return;
 
-  // In case HTML accidentally shipped disabled/readonly
-  if (stateEl.disabled) stateEl.disabled = false;
-  stateEl.removeAttribute("disabled");
-
-  // Support either "IA" value or "Iowa" value (just in case)
-  const raw = String(stateEl.value ?? "").trim();
-  let code = raw.toUpperCase();
-
-  if (!STATE_TAX_TOP_2025[code]) {
-    const found = Object.entries(STATE_NAMES).find(([, name]) => name === raw);
-    if (found) code = found[0];
-  }
-
+  const code = String(sel.value ?? "").trim().toUpperCase();
   const rate = STATE_TAX_TOP_2025[code];
   if (!Number.isFinite(rate)) return;
 
@@ -226,7 +207,7 @@ function runCalc() {
     cashValue,
     prevCashValue,
     ticketPrice: EV_ENGINE_TICKET_PRICE,
-    jackpotShare: EV_ENGINE_JACKPOT_SHARE, // FIXED
+    jackpotShare: EV_ENGINE_JACKPOT_SHARE,
     fedTax: 0,
     stateTax: 0
   });
@@ -238,6 +219,8 @@ function runCalc() {
 
   const lowerEV = resLowerNoTax.totalEV;
   const jackpotEVPreTax = resTotalNoTax.totalEV - resLowerNoTax.totalEV;
+
+  // Apply taxes ONLY to jackpot portion (this is what you wanted)
   const totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
 
   const m = resTotalNoTax.formats.money;
@@ -248,28 +231,21 @@ function runCalc() {
 // Init
 // ==============================
 window.addEventListener("DOMContentLoaded", async () => {
-  // Ensure state dropdown is usable and has options (if it exists)
-  const stateEl = getStateSelect();
-  if (stateEl) {
-    ensureStateSelectOptions(stateEl);
-    syncStateTaxFromState(); // set initial #stateTax from current state selection
-  }
+  populateStateSelect();
+  syncStateTaxFromSelect();
 
-  // IMPORTANT: event delegation so updates work even if inputs get replaced/re-rendered
+  // Event delegation: always recalcs even if inputs get replaced later
   document.addEventListener("input", (e) => {
-    // If the user changes the state dropdown, update stateTax first.
-    const stateElNow = getStateSelect();
-    if (stateElNow && e.target === stateElNow) {
-      syncStateTaxFromState();
+    if (e.target && e.target.id === "stateSelect") {
+      syncStateTaxFromSelect();
       return;
     }
     scheduleCalc();
   }, true);
 
   document.addEventListener("change", (e) => {
-    const stateElNow = getStateSelect();
-    if (stateElNow && e.target === stateElNow) {
-      syncStateTaxFromState();
+    if (e.target && e.target.id === "stateSelect") {
+      syncStateTaxFromSelect();
       return;
     }
     scheduleCalc();
