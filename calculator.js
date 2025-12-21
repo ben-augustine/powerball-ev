@@ -202,8 +202,12 @@ function runCalc() {
   const cashValue = numFrom("cashValue", NaN);
   const ticketsSold = numFrom("ticketsSold", NaN);
 
-  const fedTax = clamp01(numFrom("fedTax", 0.37));
-  const stateTax = clamp01(numFrom("stateTax", 0.00));
+  // If fedTax/stateTax are blank (or invalid), treat as 0
+  const fedTaxRaw = numFrom("fedTax", NaN);
+  const stateTaxRaw = numFrom("stateTax", NaN);
+  const fedTax = clamp01(Number.isFinite(fedTaxRaw) ? fedTaxRaw : 0);
+  const stateTax = clamp01(Number.isFinite(stateTaxRaw) ? stateTaxRaw : 0);
+
   const combinedTax = clamp01(fedTax + stateTax);
 
   if (!Number.isFinite(cashValue) || cashValue <= 0) {
