@@ -99,12 +99,20 @@ function scheduleCalc() {
 // ==============================
 // State dropdown wiring (YOUR HTML uses id="stateSelect")
 // ==============================
+const MANUAL_STATE_VALUE = "MANUAL";
+
 function populateStateSelect() {
   const sel = document.getElementById("stateSelect");
   if (!sel) return;
 
   // If options already exist, don't touch them
   if (sel.options && sel.options.length > 0) return;
+
+  // Manual entry option (default)
+  const manualOpt = document.createElement("option");
+  manualOpt.value = MANUAL_STATE_VALUE;
+  manualOpt.textContent = "Manual Entry";
+  sel.appendChild(manualOpt);
 
   const entries = Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
   for (const [code, name] of entries) {
@@ -114,8 +122,8 @@ function populateStateSelect() {
     sel.appendChild(opt);
   }
 
-  // Default to Iowa if nothing selected (matches you)
-  if (!sel.value) sel.value = "IA";
+  // Default to Manual Entry
+  sel.value = MANUAL_STATE_VALUE;
 }
 
 function syncStateTaxFromSelect() {
@@ -123,12 +131,28 @@ function syncStateTaxFromSelect() {
   const stateTaxEl = document.getElementById("stateTax");
   if (!sel || !stateTaxEl) return;
 
-  const code = String(sel.value ?? "").trim().toUpperCase();
-  const rate = STATE_TAX_TOP_2025[code];
+  const v = String(sel.value ?? "").trim().toUpperCase();
+
+  // Manual: force 0 (per your spec) and recalc
+  if (v === MANUAL_STATE_VALUE) {
+    stateTaxEl.value = "0";
+    scheduleCalc();
+    return;
+  }
+
+  const rate = STATE_TAX_TOP_2025[v];
   if (!Number.isFinite(rate)) return;
 
   stateTaxEl.value = String(rate);
   scheduleCalc();
+}
+
+function setStateToManualIfUserTypedTax() {
+  const sel = document.getElementById("stateSelect");
+  if (!sel) return;
+  if (String(sel.value ?? "") !== MANUAL_STATE_VALUE) {
+    sel.value = MANUAL_STATE_VALUE;
+  }
 }
 
 // ==============================
@@ -220,7 +244,7 @@ function runCalc() {
   const lowerEV = resLowerNoTax.totalEV;
   const jackpotEVPreTax = resTotalNoTax.totalEV - resLowerNoTax.totalEV;
 
-  // Apply taxes ONLY to jackpot portion (this is what you wanted)
+  // Apply taxes ONLY to jackpot portion
   const totalEV = lowerEV + (jackpotEVPreTax * (1 - combinedTax));
 
   const m = resTotalNoTax.formats.money;
@@ -232,6 +256,8 @@ function runCalc() {
 // ==============================
 window.addEventListener("DOMContentLoaded", async () => {
   populateStateSelect();
+
+  // Default Manual Entry => stateTax = 0
   syncStateTaxFromSelect();
 
   // Event delegation: always recalcs even if inputs get replaced later
@@ -240,6 +266,14 @@ window.addEventListener("DOMContentLoaded", async () => {
       syncStateTaxFromSelect();
       return;
     }
+
+    // If user types in the manual state tax box, switch dropdown to Manual
+    if (e.target && e.target.id === "stateTax") {
+      setStateToManualIfUserTypedTax();
+      scheduleCalc();
+      return;
+    }
+
     scheduleCalc();
   }, true);
 
@@ -248,6 +282,13 @@ window.addEventListener("DOMContentLoaded", async () => {
       syncStateTaxFromSelect();
       return;
     }
+
+    if (e.target && e.target.id === "stateTax") {
+      setStateToManualIfUserTypedTax();
+      scheduleCalc();
+      return;
+    }
+
     scheduleCalc();
   }, true);
 
