@@ -4,6 +4,10 @@
   const WHITE_PICK = 5;
   const PB_TOTAL = 26;
 
+  // Each ticket contributes ~$0.70 to *cash value*
+  // (This is the model you want for ticket sales inference.)
+  const CONTRIBUTION_PER_TICKET = 0.70;
+
   function clamp01(x) {
     if (!Number.isFinite(x)) return 0;
     return Math.min(1, Math.max(0, x));
@@ -59,7 +63,8 @@
     return 0;
   }
 
-  function lowerTierEVPerTicket(afterTaxMultiplier) {
+  // Lower tiers are ALWAYS untaxed per your spec.
+  function lowerTierEVPerTicket() {
     const tiers = [
       [5, false],
       [4, true],
@@ -76,7 +81,7 @@
     for (const [k, pb] of tiers) {
       const prize = prizeFor(k, pb);
       const p = probFor(k, pb);
-      ev += p * prize * afterTaxMultiplier;
+      ev += p * prize;
     }
     return ev;
   }
@@ -100,17 +105,20 @@
     const prevCashValue = Number(opts.prevCashValue);
     const ticketsSold = Number(opts.ticketsSold);
 
+    // Kept for compatibility with existing callers (but NOT used for tickets estimation anymore)
     const ticketPrice = Number(opts.ticketPrice);
     const jackpotShare = clamp01(Number(opts.jackpotShare));
+
     const fedTax = clamp01(Number(opts.fedTax));
     const stateTax = clamp01(Number(opts.stateTax));
     const totalTax = clamp01(fedTax + stateTax);
 
-    if (!Number.isFinite(cashValue) || cashValue <= 0) {
+    // Allow cashValue = 0 specifically so you can compute "lower tiers only"
+    if (!Number.isFinite(cashValue) || cashValue < 0) {
       return { ok: false, error: "Enter a valid cash value jackpot." };
     }
 
-    // Tickets estimate: manual override > delta method > fallback
+    // Tickets estimate: manual override > deltaCash/0.70 > fallback (cashValue/0.70)
     let ticketsEst;
     let usedDelta = false;
     let usedManualTickets = false;
@@ -118,28 +126,39 @@
     if (Number.isFinite(ticketsSold) && ticketsSold > 0) {
       ticketsEst = ticketsSold;
       usedManualTickets = true;
-    } else if (Number.isFinite(prevCashValue) && prevCashValue > 0) {
+    } else if (Number.isFinite(prevCashValue) && prevCashValue >= 0) {
       const deltaCash = cashValue - prevCashValue;
-      if (deltaCash <= 0) {
+      if (deltaCash < 0) {
         return {
           ok: false,
-          error: "Previous cash value must be lower than current cash value (or enter tickets sold).",
+          error: "Previous cash value must be <= current cash value (or enter tickets sold).",
         };
       }
-      ticketsEst = deltaCash / Math.max(0.01, jackpotShare) / Math.max(0.01, ticketPrice);
+      ticketsEst = deltaCash / CONTRIBUTION_PER_TICKET;
       usedDelta = true;
     } else {
-      ticketsEst = cashValue / Math.max(0.01, jackpotShare) / Math.max(0.01, ticketPrice);
+      ticketsEst = cashValue / CONTRIBUTION_PER_TICKET;
     }
 
-    const lambdaOthers = ticketsEst / ODDS_JACKPOT;
+    const lambdaOthers = (Number.isFinite(ticketsEst) && ticketsEst > 0)
+      ? (ticketsEst / ODDS_JACKPOT)
+      : 0;
 
-    const expectedIfWin = expectedShareGivenWin(cashValue, lambdaOthers);
+    // Jackpot EV: taxed and split-aware
     const afterTaxMult = (1 - totalTax);
-    const jackpotEVPerTicket = (1 / ODDS_JACKPOT) * expectedIfWin * afterTaxMult;
 
-    const lowerEVPerTicket = lowerTierEVPerTicket(afterTaxMult);
+    let expectedIfWin = 0;
+    let jackpotEVPerTicket = 0;
 
+    if (cashValue > 0) {
+      expectedIfWin = expectedShareGivenWin(cashValue, lambdaOthers);
+      jackpotEVPerTicket = (1 / ODDS_JACKPOT) * expectedIfWin * afterTaxMult;
+    }
+
+    // Lower tiers: untaxed
+    const lowerEVPerTicket = lowerTierEVPerTicket();
+
+    // Total: lower (untaxed) + jackpot (taxed)
     const totalEV = jackpotEVPerTicket + lowerEVPerTicket;
 
     return {
@@ -156,6 +175,9 @@
       lowerEVPerTicket,
       totalEV,
       formats: { money, money0 },
+      // keep these for compatibility/debugging even though they're no longer used for tickets inference
+      ticketPrice,
+      jackpotShare,
     };
   }
 
