@@ -97,6 +97,60 @@ function scheduleCalc() {
 }
 
 // ==============================
+// State dropdown -> stateTax wiring
+// ==============================
+function getStateSelect() {
+  return (
+    document.getElementById("state") ||
+    document.getElementById("stateCode") ||
+    document.getElementById("stateSelect") ||
+    document.querySelector('select[name="state"]') ||
+    document.querySelector('select[name="stateCode"]')
+  );
+}
+
+function ensureStateSelectOptions(stateEl) {
+  if (!stateEl) return;
+  // If it already has options, leave it alone.
+  if (stateEl.options && stateEl.options.length > 1) return;
+
+  // Build options: value = state code, label = full name
+  const entries = Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1]));
+  stateEl.innerHTML = "";
+  for (const [code, name] of entries) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = name;
+    stateEl.appendChild(opt);
+  }
+}
+
+function syncStateTaxFromState() {
+  const stateEl = getStateSelect();
+  const stateTaxEl = document.getElementById("stateTax");
+  if (!stateEl || !stateTaxEl) return;
+
+  // In case HTML accidentally shipped disabled/readonly
+  if (stateEl.disabled) stateEl.disabled = false;
+  stateEl.removeAttribute("disabled");
+
+  // Support either "IA" value or "Iowa" value (just in case)
+  const raw = String(stateEl.value ?? "").trim();
+  let code = raw.toUpperCase();
+
+  if (!STATE_TAX_TOP_2025[code]) {
+    const found = Object.entries(STATE_NAMES).find(([, name]) => name === raw);
+    if (found) code = found[0];
+  }
+
+  const rate = STATE_TAX_TOP_2025[code];
+  if (!Number.isFinite(rate)) return;
+
+  stateTaxEl.value = String(rate);
+  scheduleCalc();
+}
+
+// ==============================
 // Worker autofill
 // ==============================
 async function autofillFromWorker() {
@@ -194,11 +248,32 @@ function runCalc() {
 // Init
 // ==============================
 window.addEventListener("DOMContentLoaded", async () => {
-  // NEW: re-run calc whenever any input changes
-  document.querySelectorAll("input, select, textarea").forEach((el) => {
-    el.addEventListener("input", scheduleCalc);
-    el.addEventListener("change", scheduleCalc);
-  });
+  // Ensure state dropdown is usable and has options (if it exists)
+  const stateEl = getStateSelect();
+  if (stateEl) {
+    ensureStateSelectOptions(stateEl);
+    syncStateTaxFromState(); // set initial #stateTax from current state selection
+  }
+
+  // IMPORTANT: event delegation so updates work even if inputs get replaced/re-rendered
+  document.addEventListener("input", (e) => {
+    // If the user changes the state dropdown, update stateTax first.
+    const stateElNow = getStateSelect();
+    if (stateElNow && e.target === stateElNow) {
+      syncStateTaxFromState();
+      return;
+    }
+    scheduleCalc();
+  }, true);
+
+  document.addEventListener("change", (e) => {
+    const stateElNow = getStateSelect();
+    if (stateElNow && e.target === stateElNow) {
+      syncStateTaxFromState();
+      return;
+    }
+    scheduleCalc();
+  }, true);
 
   await autofillFromWorker();
   runCalc();
