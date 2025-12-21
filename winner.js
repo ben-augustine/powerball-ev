@@ -68,7 +68,7 @@ async function loadAutoEstimate() {
       jackpotShare: DEFAULT_JACKPOT_SHARE,
       ticketPrice: DEFAULT_TICKET_PRICE
     });
-      if (nOut) nOut.value = n.toLocaleString();
+    if (nOut) nOut.value = n.toLocaleString();
 
     const when = j?.fetchedAt ? new Date(j.fetchedAt).toLocaleString() : "unknown";
     if (metaOut) metaOut.textContent = `Auto estimate updated: ${when}.`;
