@@ -6,13 +6,6 @@
   <title>Will Anyone Win The Powerball?</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Favicons -->
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
 </head>
 <body>
   <header>
@@ -33,13 +26,19 @@
       <div class="grid">
         <label>
           Tickets Sold
-          <input id="nOut" type="text" inputmode="numeric" />
+          <!-- editable so it can trigger updates -->
+          <input id="nIn" type="text" inputmode="numeric" />
         </label>
 
         <label>
-          Potential Outcomes
-          <input id="pOut" type="text" inputmode="numberic" />
+          Jackpot Odds (1 in …)
+          <!-- editable so it can trigger updates -->
+          <input id="pIn" type="text" inputmode="numeric" />
         </label>
+      </div>
+
+      <div style="margin-top: .75rem;">
+        <button id="useAutoBtn" type="button">Use Auto Estimate</button>
       </div>
 
       <div class="results" style="margin-top: 1rem;">
@@ -54,9 +53,7 @@
         </div>
       </div>
 
-      <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">
-        Updating…
-      </div>
+      <div id="metaOut" class="small muted" style="margin-top: 0.75rem;">Updating…</div>
     </section>
   </main>
 
@@ -64,7 +61,6 @@
     This is a math tool, not gambling advice. Not affiliated with Powerball®, the MUSL, or any state lottery.
   </footer>
 
-  <!-- cache-busted to force update -->
-  <script src="winner.js?v=4"></script>
+  <script src="winner.js?v=5"></script>
 </body>
 </html>
