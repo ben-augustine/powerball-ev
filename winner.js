@@ -6,7 +6,7 @@ const ODDS_JACKPOT = 292201338;
 
 // Defaults for estimating tickets from cash delta
 const DEFAULT_TICKET_PRICE = 2;
-const DEFAULT_JACKPOT_SHARE = 0.70;
+const DEFAULT_JACKPOT_SHARE = 0.35;
 
 function clampMin(x, min) {
   return x < min ? min : x;
