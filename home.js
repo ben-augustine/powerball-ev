@@ -1,5 +1,5 @@
 // Worker endpoint (hourly caching happens in the Worker)
-const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball?v=1";
+const WORKER_URL = "https://powerball-ev-data.ben-augustine319.workers.dev/powerball";
 
 // Display rules
 const DISPLAY_TICKET_PRICE = 2;
@@ -33,8 +33,14 @@ async function refreshHero() {
       throw new Error("Missing cash values");
     }
 
-    // Tickets sold since last draw based on $0.70 cash increase per ticket
-    const ticketsSold = (cashValue - prevCashValue) / CONTRIBUTION_PER_TICKET;
+    let ticketsSold;
+
+// If jackpot reset, prevCashValue > cashValue → can't infer from delta → assume 8M
+    if (prevCashValue > cashValue) {
+      ticketsSold = 8_000_000;
+    } else {
+      ticketsSold = (cashValue - prevCashValue) / CONTRIBUTION_PER_TICKET;
+    }
 
     // Defaults for home (no inputs)
     const fedTax = 0.37;
