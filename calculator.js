@@ -177,8 +177,17 @@ async function autofillFromWorker() {
     if (!String(ticketsEl.value ?? "").trim()) {
       const cashNow = readNumberValue(cashEl);
       const cashUse = Number.isFinite(cashNow) ? cashNow : nextCash;
-      const t = computeTicketsSoldFromDeltaCash(cashUse, prevCash);
-      if (Number.isFinite(t)) ticketsEl.value = String(Math.round(t));
+      let t = computeTicketsSoldFromDeltaCash(cashUse, prevCash);
+
+      // If we can't infer from Δcash AND prevCash > current (reset),
+      // assume 8,000,000 tickets sold.
+      if (!Number.isFinite(t) && prevCash > cashUse) {
+        t = 8_000_000;
+      }
+
+      if (Number.isFinite(t)) {
+        ticketsEl.value = String(Math.round(t));
+      }
     }
 
     scheduleCalc();
